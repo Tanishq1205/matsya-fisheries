@@ -6,6 +6,8 @@ import Navbar from './components/common/Navbar';
 import Hero from './components/home/HeroBanner';
 import FeaturedSpotlights from './components/home/FeaturedSpotlights';
 import ProductGrid from './components/catalog/ProductGrid';
+import CartDrawer from './components/checkout/CartDrawer';
+
 
 
 export default function App() {
@@ -52,13 +54,14 @@ export default function App() {
     <div className="relative min-h-screen bg-[#FAF7EE] text-[#1D184D">
       {isLoading && <LogoPreloader onComplete={handlePreloaderComplete} />}
 
-      <Navbar cartCount={0} onOpenCart={() => console.log('Cart')} />
+      <Navbar />
 
       <main id="top" className="relative w-full">
         <Hero />
         <FeaturedSpotlights />
         <ProductGrid />
       </main>
+      <CartDrawer />
     </div>
   );
 }

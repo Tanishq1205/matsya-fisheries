@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Menu, X } from 'lucide-react';
+import { useCartStore } from '../../store/useCartStore'; // 1. Added Zustand Import
 
 export default function Navbar({
-  cartCount = 0,
+  cartCount: propCartCount,
   onOpenCart,
   logoSrc = '/images/matsya-logo-navbar.png',
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // 2. Connect to Zustand Store
+  const { toggleCart, getItemCount } = useCartStore();
+  const cartCount = propCartCount && propCartCount > 0 ? propCartCount : getItemCount();
+  const handleCartClick = onOpenCart && !onOpenCart.toString().includes('console.log') 
+    ? onOpenCart 
+    : toggleCart;
 
   useEffect(() => {
     let ticking = false;
@@ -90,7 +98,7 @@ export default function Navbar({
           {/* 3. Cart Trigger & Mobile Menu */}
           <div className="relative z-10 flex items-center gap-3">
             <button
-              onClick={onOpenCart}
+              onClick={handleCartClick} // 3. Updated click handler
               aria-label="View Shopping Cart"
               className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border transition-all duration-200 active:scale-95 cursor-pointer ${
                 isScrolled
