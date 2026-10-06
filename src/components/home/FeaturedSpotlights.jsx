@@ -122,10 +122,10 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
     <section
       id="featured-products"
       ref={sectionRef}
-      className="relative w-full bg-[#FAF7EE] overflow-hidden select-none pb-24"
+      className="relative w-full bg-[#FAF7EE] overflow-hidden select-none pb-24 -mt-2 sm:-mt-4 z-20"
     >
-      {/* 1. Divider Bar */}
-      <div className="w-full bg-[#1D184D] border-y border-[#2B2568] py-3.5 px-4 sm:px-8">
+      {/* 1. Divider Bar (Flushed against Hero wave) */}
+      <div className="w-full bg-[#1D184D] border-y border-[#2B2568] py-3.5 px-4 sm:px-8 relative z-20">
         <div className="max-w-[1560px] mx-auto flex items-center justify-between text-[11px] sm:text-xs font-semibold tracking-[0.25em] uppercase text-[#D5C582] font-['Sora',sans-serif]">
           <span>Dock-to-Door Mumbai</span>
           <span className="hidden md:inline text-white/40">•</span>
@@ -147,7 +147,7 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
         <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold tracking-tight text-[#1D184D] leading-tight font-['Sora',sans-serif]">
           Signature Catches.{' '}
           <span className="text-[#1D184D]/50 font-normal block sm:inline sm:ml-2">
-            Take a look at today's catch.
+            Our Classics
           </span>
         </h2>
       </div>
@@ -179,7 +179,7 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
             >
               <div
                 onClick={() => onSelectProduct && onSelectProduct(item.name)}
-                className="rounded-[32px] overflow-hidden bg-[#16123D] border border-[#1D184D]/10 transition-transform duration-200 hover:-translate-y-1 cursor-pointer"
+                className="rounded-[32px] overflow-hidden bg-[#16123D] border-[3px] border-transparent hover:border-[#D5C582] transition-all duration-300 hover:-translate-y-1 cursor-pointer"
               >
                 <img
                   src={item.image}

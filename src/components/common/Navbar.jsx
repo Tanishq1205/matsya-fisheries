@@ -1,21 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Menu, X } from 'lucide-react';
-import { useCartStore } from '../../store/useCartStore'; // 1. Added Zustand Import
+import { useCartStore } from '../../store/useCartStore';
+
+// 1. WhatsApp Configuration for Bulk Inquiry
+const MATSYA_WHATSAPP_NUMBER = '919372379317'; // Replace with official business number
+const BULK_INQUIRY_TEXT = encodeURIComponent(
+  'Hello Matsya Fisheries, I would like to inquire about bulk/wholesale seafood supply for my business.'
+);
+const WHATSAPP_BULK_URL = `https://wa.me/${MATSYA_WHATSAPP_NUMBER}?text=${BULK_INQUIRY_TEXT}`;
 
 export default function Navbar({
   cartCount: propCartCount,
   onOpenCart,
+  onLogoClick,
   logoSrc = '/images/matsya-logo-navbar.png',
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // 2. Connect to Zustand Store
+  // Connect to Zustand Store
   const { toggleCart, getItemCount } = useCartStore();
   const cartCount = propCartCount && propCartCount > 0 ? propCartCount : getItemCount();
-  const handleCartClick = onOpenCart && !onOpenCart.toString().includes('console.log') 
-    ? onOpenCart 
+  const handleCartClick = onOpenCart && !onOpenCart.toString().includes('console.log')
+    ? onOpenCart
     : toggleCart;
+
+  // Logo / brand name click handler
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    if (onLogoClick) {
+      onLogoClick();
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     let ticking = false;
@@ -35,15 +54,15 @@ export default function Navbar({
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // 2. Navigation items with WhatsApp External flag
   const navLinks = [
-    { label: 'Collaborations', href: '#collaborations' },
-    { label: 'Our Story', href: '#story' },
-    { label: 'Contact for Bulk', href: '#bulk' },
+    { label: 'Our Story', href: '#story', isExternal: false },
+    { label: 'Contact for Bulk', href: WHATSAPP_BULK_URL, isExternal: true },
   ];
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none pt-3 sm:pt-4 px-4 sm:px-6">
+      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none pt-3 sm:pt-4 px-4 sm:px-6 select-none">
         <nav className="relative pointer-events-auto w-full max-w-5xl flex items-center justify-between py-2.5 px-6 sm:px-8">
           {/* Floating Pill Background */}
           <div
@@ -54,9 +73,10 @@ export default function Navbar({
             }`}
           />
 
-          {/* 1. Brand Mark */}
+          {/* Brand Mark */}
           <a
-            href="#top"
+            href="/"
+            onClick={handleLogoClick}
             className="relative z-10 flex items-center gap-3 transition-transform duration-200 active:scale-95"
           >
             <img
@@ -78,12 +98,14 @@ export default function Navbar({
             </span>
           </a>
 
-          {/* 2. Navigation Links */}
+          {/* Desktop Navigation Links */}
           <div className="relative z-10 hidden md:flex items-center gap-8 lg:gap-11 text-[12px] font-semibold tracking-[0.16em] uppercase">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
+                target={link.isExternal ? '_blank' : undefined}
+                rel={link.isExternal ? 'noopener noreferrer' : undefined}
                 className={`relative py-1 transition-colors duration-200 ${
                   isScrolled
                     ? 'text-[#FAF7EE]/70 hover:text-[#D5C582]'
@@ -95,10 +117,10 @@ export default function Navbar({
             ))}
           </div>
 
-          {/* 3. Cart Trigger & Mobile Menu */}
+          {/* Cart Trigger & Mobile Menu Toggle */}
           <div className="relative z-10 flex items-center gap-3">
             <button
-              onClick={handleCartClick} // 3. Updated click handler
+              onClick={handleCartClick}
               aria-label="View Shopping Cart"
               className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border transition-all duration-200 active:scale-95 cursor-pointer ${
                 isScrolled
@@ -138,6 +160,8 @@ export default function Navbar({
               <a
                 key={link.label}
                 href={link.href}
+                target={link.isExternal ? '_blank' : undefined}
+                rel={link.isExternal ? 'noopener noreferrer' : undefined}
                 onClick={() => setMobileMenuOpen(false)}
                 className="hover:text-[#D5C582] transition-colors"
               >

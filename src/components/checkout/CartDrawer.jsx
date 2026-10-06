@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, X, CreditCard } from 'lucide-react';
+import { Trash2, X, CreditCard, Sparkles, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import PincodeChecker from './PincodeChecker';
 
@@ -58,8 +58,8 @@ export default function CartDrawer() {
     const grandTotal = subtotal + deliveryFee;
 
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_HERE', // Set in .env as VITE_RAZORPAY_KEY_ID
-      amount: grandTotal * 100, // Amount in paise
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_HERE',
+      amount: grandTotal * 100,
       currency: 'INR',
       name: 'Matsya Fisheries',
       description: `Fresh Catch Order (${cart.length} item${cart.length > 1 ? 's' : ''})`,
@@ -79,7 +79,7 @@ export default function CartDrawer() {
         delivery_slot: deliverySlot,
       },
       theme: {
-        color: '#100D2D',
+        color: '#C2542D',
       },
     };
 
@@ -89,69 +89,96 @@ export default function CartDrawer() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ease-in-out ${
+      className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ease-in-out select-none ${
         isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
+      {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-[#1D184D]/70 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
+        className={`fixed inset-0 bg-[#100D2D]/80 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={closeCart}
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6">
         <div
-          className={`w-screen max-w-md bg-[#16123D] text-[#FAF7EE] flex flex-col shadow-2xl border-l border-[#D5C582]/20 transform transition-transform duration-300 ease-in-out ${
+          className={`w-screen max-w-md bg-gradient-to-b from-[#1D184D] via-[#16123D] to-[#100D2D] text-[#FAF7EE] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.6)] border-l border-[#D5C582]/30 transform transition-transform duration-300 ease-in-out relative overflow-hidden ${
             isOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
+          {/* Subtle Ambient Warm Glow behind the drawer */}
+          <div className="absolute top-1/4 -right-20 w-80 h-80 rounded-full bg-[#D5C582]/10 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/3 -left-20 w-80 h-80 rounded-full bg-[#C2542D]/10 blur-3xl pointer-events-none" />
+
+          {/* Top Warm Gold Accent Strip */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-[#D5C582] via-[#C2542D] to-[#D5C582]" />
+
           {/* Header */}
-          <div className="p-5 border-b border-[#D5C582]/15 flex items-center justify-between bg-[#100D2D]">
-            <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-bold tracking-widest text-[#D5C582] uppercase font-['Sora',sans-serif]">
-                Your Basket
-              </h2>
-              <span className="bg-[#D5C582]/20 text-[#D5C582] text-xs px-2.5 py-0.5 rounded-full font-bold">
-                {cart.reduce((sum, item) => sum + item.quantity, 0)}
-              </span>
+          <div className="p-5 border-b border-[#D5C582]/20 flex items-center justify-between bg-[#1D184D]/90 backdrop-blur-xl relative z-10">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-[#D5C582]/10 border border-[#D5C582]/30 flex items-center justify-center text-[#D5C582]">
+                <ShoppingBag className="w-5 h-5 text-[#D5C582]" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold tracking-[0.2em] text-[#FAF7EE] uppercase font-['Sora',sans-serif]">
+                  Your Basket
+                </h2>
+                <span className="text-[10px] font-semibold text-[#D5C582] uppercase tracking-wider block">
+                  100% Edible Net Weight Guarantee
+                </span>
+              </div>
             </div>
-            <button
-              onClick={closeCart}
-              className="p-2 text-[#FAF7EE]/60 hover:text-[#FAF7EE] rounded-lg transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            <div className="flex items-center gap-3">
+              <span className="bg-[#C2542D] text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">
+                {cart.reduce((sum, item) => sum + item.quantity, 0)} Pcs
+              </span>
+              <button
+                onClick={closeCart}
+                className="p-2 text-[#FAF7EE]/70 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
-          {/* Free Delivery Bar */}
-          <div className="bg-[#100D2D]/60 p-4 border-b border-[#D5C582]/10">
-            <p className="text-xs text-[#FAF7EE]/80 font-medium mb-2">
+          {/* Express Delivery Progress Bar */}
+          <div className="bg-[#16123D] p-4 border-b border-[#D5C582]/15 relative z-10">
+            <p className="text-xs text-[#FAF7EE] font-medium mb-2.5 flex items-center justify-between">
               {amountForFreeDelivery > 0 ? (
                 <>
-                  Add <span className="text-[#D5C582] font-bold">₹{amountForFreeDelivery}</span> more for Free Express Delivery
+                  <span className="text-white/80">Express Mumbai Delivery</span>
+                  <span className="text-xs font-bold text-[#D5C582] bg-[#D5C582]/10 px-2.5 py-0.5 rounded-md border border-[#D5C582]/25">
+                    Add ₹{amountForFreeDelivery} for FREE
+                  </span>
                 </>
               ) : (
-                <span className="text-emerald-400 font-bold">
-                  🎉 You unlocked Free Mumbai Express Delivery!
+                <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs">
+                  <Sparkles className="w-4 h-4 text-[#D5C582]" /> 🎉 Free Express Delivery Unlocked!
                 </span>
               )}
             </p>
-            <div className="w-full bg-[#100D2D] h-1.5 rounded-full overflow-hidden border border-white/5">
+
+            <div className="w-full bg-[#100D2D] h-2 rounded-full overflow-hidden border border-[#D5C582]/20 p-0.5">
               <div
-                className="bg-[#D5C582] h-full transition-all duration-500 ease-out"
+                className="bg-gradient-to-r from-[#D5C582] via-[#E06B43] to-[#C2542D] h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(213,197,130,0.5)]"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
 
-          {/* Cart Items & Pincode Checker */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          {/* Middle Content Area (Pincode + Cart Items) */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 relative z-10 scrollbar-thin scrollbar-thumb-[#D5C582]/20">
             {cart.length === 0 ? (
-              <div className="text-center py-16 text-[#FAF7EE]/40">
-                <div className="text-4xl mb-3">🐟</div>
-                <p className="text-base font-semibold text-[#FAF7EE]/70">Your basket is empty</p>
-                <p className="text-xs mt-1">Select fresh seafood from the catalog to get started.</p>
+              <div className="text-center py-20 text-[#FAF7EE]/40 flex flex-col items-center">
+                <div className="w-20 h-20 rounded-3xl bg-[#1D184D] border-2 border-[#D5C582]/30 flex items-center justify-center text-3xl mb-4 shadow-xl">
+                  🦐
+                </div>
+                <p className="text-lg font-bold text-[#FAF7EE] font-['Sora',sans-serif]">Your Basket is Empty</p>
+                <p className="text-xs text-[#FAF7EE]/60 mt-1 max-w-[220px]">
+                  Select fresh coastal catches from the catalog to get started.
+                </p>
               </div>
             ) : (
               <>
@@ -160,9 +187,11 @@ export default function CartDrawer() {
                 {cart.map((item) => (
                   <div
                     key={item.cartItemId}
-                    className="bg-[#100D2D]/80 p-3.5 rounded-xl border border-[#D5C582]/15 flex items-center justify-between gap-3 hover:border-[#D5C582]/30 transition-colors"
+                    className="group bg-[#100D2D]/90 p-4 rounded-2xl border border-[#D5C582]/20 
+                    flex items-center justify-between gap-3.5 shadow-md transition-all duration-300"
                   >
-                    <div className="w-14 h-14 rounded-lg bg-[#16123D] border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                    {/* Item Thumbnail */}
+                    <div className="w-16 h-16 rounded-xl bg-[#1D184D] border border-[#D5C582]/20 overflow-hidden shrink-0 flex items-center justify-center  transition-transform duration-300">
                       <img
                         src={item.image}
                         alt={item.name}
@@ -175,39 +204,45 @@ export default function CartDrawer() {
                       />
                     </div>
 
+                    {/* Item Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline space-x-1.5 truncate">
-                        <h4 className="font-semibold text-[#FAF7EE] text-sm truncate">{item.name}</h4>
+                        <h4 className="font-bold text-[#FAF7EE] text-sm truncate font-['Sora',sans-serif]">
+                          {item.name}
+                        </h4>
                         {item.marathiName && (
-                          <span className="text-xs text-[#D5C582] font-medium shrink-0">
+                          <span className="text-xs text-[#D5C582] font-semibold shrink-0">
                             ({item.marathiName})
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-[#FAF7EE]/60 mt-0.5">
-                        {item.weight} • {item.cut}
+
+                      <p className="text-[11px] font-medium text-[#FAF7EE]/65 mt-0.5">
+                        {item.weight} • <span className="text-[#D5C582]">{item.cut}</span>
                       </p>
-                      <p className="text-sm font-bold text-[#D5C582] mt-1">
+
+                      <p className="text-base font-black text-[#D5C582] mt-1 tracking-tight">
                         ₹{item.price * item.quantity}
                       </p>
                     </div>
 
+                    {/* Quantity Selector & Trash */}
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center space-x-1.5 bg-[#16123D] px-2 py-1 rounded-lg border border-[#D5C582]/20">
+                      <div className="flex items-center space-x-2 bg-[#16123D] px-2.5 py-1.5 rounded-xl border border-[#D5C582]/25">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.cartItemId, -1)}
-                          className="text-[#FAF7EE]/60 hover:text-[#D5C582] font-bold text-xs px-1 cursor-pointer"
+                          className="text-[#FAF7EE]/70 hover:text-[#D5C582] font-black text-sm px-1 cursor-pointer transition-colors"
                         >
                           -
                         </button>
-                        <span className="text-xs font-bold text-[#FAF7EE] w-3 text-center">
+                        <span className="text-xs font-black text-[#FAF7EE] w-4 text-center font-mono">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.cartItemId, 1)}
-                          className="text-[#FAF7EE]/60 hover:text-[#D5C582] font-bold text-xs px-1 cursor-pointer"
+                          className="text-[#FAF7EE]/70 hover:text-[#D5C582] font-black text-sm px-1 cursor-pointer transition-colors"
                         >
                           +
                         </button>
@@ -216,7 +251,7 @@ export default function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => removeItem(item.cartItemId)}
-                        className="p-1.5 text-[#FAF7EE]/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-[#FAF7EE]/40 hover:text-[#C2542D] hover:bg-[#C2542D]/15 rounded-xl transition-all cursor-pointer"
                         title="Remove item"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -228,26 +263,35 @@ export default function CartDrawer() {
             )}
           </div>
 
-          {/* Footer Subtotal & Razorpay Checkout */}
+          {/* Subtotal & Checkout Footer */}
           {cart.length > 0 && (
-            <div className="p-5 border-t border-[#D5C582]/15 bg-[#100D2D] space-y-3">
-              <div className="flex justify-between items-center text-sm text-[#FAF7EE]/80">
-                <span>Estimated Subtotal</span>
-                <span className="text-xl font-bold text-[#D5C582]">₹{subtotal}</span>
+            <div className="p-5 border-t border-[#D5C582]/20 bg-[#1D184D]/95 backdrop-blur-xl space-y-4 shadow-2xl relative z-10">
+              <div className="flex justify-between items-end">
+                <div>
+                  <span className="text-[11px] font-bold tracking-widest text-[#FAF7EE]/60 uppercase block">
+                    Estimated Subtotal
+                  </span>
+                  <span className="text-[10px] text-[#D5C582] font-semibold">
+                    Includes RO Cleaning & Custom Cutting
+                  </span>
+                </div>
+                <span className="text-2xl font-black text-[#D5C582] font-['Sora',sans-serif] tracking-tight">
+                  ₹{subtotal}
+                </span>
               </div>
 
               <button
                 type="button"
                 onClick={handleRazorpayCheckout}
                 disabled={!isServiceable}
-                className={`w-full font-bold py-3.5 rounded-xl transition-all shadow-lg text-xs tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] ${
+                className={`w-full font-black py-4 rounded-2xl transition-all shadow-xl text-xs tracking-[0.2em] uppercase flex items-center justify-center gap-3 cursor-pointer active:scale-[0.98] ${
                   isServiceable
-                    ? 'bg-[#D5C582] hover:bg-[#E5D79E] text-[#1D184D]'
-                    : 'bg-[#D5C582]/30 text-[#FAF7EE]/40 cursor-not-allowed'
+                    ? 'bg-[#C2542D] hover:bg-[#A84320] text-white border border-[#D5C582]/40 shadow-[0_4px_20px_rgba(194,84,45,0.4)]'
+                    : 'bg-white/10 text-white/30 border border-white/5 cursor-not-allowed'
                 }`}
               >
-                <CreditCard className="w-4 h-4" />
-                {isServiceable ? 'Pay via Razorpay' : 'Verify Pincode to Checkout'}
+                <CreditCard className="w-4 h-4 text-[#D5C582]" />
+                {isServiceable ? 'Proceed to Checkout' : 'Verify Pincode to Checkout'}
               </button>
             </div>
           )}

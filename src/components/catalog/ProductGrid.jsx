@@ -1,6 +1,180 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useCartStore } from '../../store/useCartStore'; // 1. Store imported
+import { Eye } from 'lucide-react';
+import { useCartStore } from '../../store/useCartStore';
+
+// SPECIES-SPECIFIC CUTS & NUTRITION DATABASE
+const PRODUCT_SPECIFIC_DATA = {
+  1: { // Squids
+    image: 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'squid-rings', name: 'Cleaned Rings & Tentacles', description: 'Ink bag & quill removed, sliced into rings for calamari fry or curry.', yieldPercentage: 65 },
+      { id: 'squid-whole', name: 'Whole Cleaned Tube', description: 'Gutted and cleaned tube left whole, ideal for stuffing and grilling.', yieldPercentage: 75 },
+    ],
+    healthBenefits: [
+      { title: 'Copper & B12', value: '90% RDA', description: 'Supports red blood cell formation and nervous system.' },
+      { title: 'Lean Protein', value: '18g / 100g', description: 'Low fat content ideal for clean calorie diets.' },
+    ],
+  },
+  2: { // Mushi
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'mushi-cubes', name: 'Skinless Boneless Cubes', description: 'Thick skin peeled, cartilage removed, cut into soft curry cubes.', yieldPercentage: 70 },
+      { id: 'mushi-steaks', name: 'Skinless Steaks', description: 'Skinless center steaks perfect for traditional Koli shark curry.', yieldPercentage: 80 },
+    ],
+    healthBenefits: [
+      { title: 'Collagen Rich', value: 'High Natural', description: 'Supports joint health and skin elasticity.' },
+      { title: 'Pure Protein', value: '21g / 100g', description: 'Dense muscle-building nutrition without fine bones.' },
+    ],
+  },
+  3: { // Shrimole
+    image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'shrimole-peeled', name: 'Peeled & Deveined', description: 'Shell and vein removed, washed in pure RO water.', yieldPercentage: 55 },
+      { id: 'shrimole-whole', name: 'Whole Shell-On', description: 'Unpeeled fresh tiny prawns for traditional Sukka gravy.', yieldPercentage: 85 },
+    ],
+    healthBenefits: [
+      { title: 'Zinc & Iodine', value: '70% RDA', description: 'Essential minerals for metabolic function.' },
+    ],
+  },
+  4: { // Tiger Prawns
+    image: 'https://images.unsplash.com/photo-1559737605-17ac46200232?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'tiger-tail-on', name: 'Peeled & Deveined (Tail-On)', description: 'Shell removed with tail retained for gourmet presentation.', yieldPercentage: 60 },
+      { id: 'tiger-tail-off', name: 'Peeled & Deveined (Tail-Off)', description: '100% shell-free & vein-free, ready to cook.', yieldPercentage: 55 },
+    ],
+    healthBenefits: [
+      { title: 'Astaxanthin', value: 'High Antioxidant', description: 'Natural compound that supports skin and heart health.' },
+    ],
+  },
+  5: { // Red Prawns
+    image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'red-peeled', name: 'Peeled & Deveined', description: 'Vein removed and shell peeled for quick sauteing.', yieldPercentage: 58 },
+    ],
+    healthBenefits: [
+      { title: 'Natural Sweetness', value: 'Sea Fresh', description: 'Naturally rich in glycine and amino acids.' },
+    ],
+  },
+  6: { // Scampi
+    image: 'https://images.unsplash.com/photo-1559737605-17ac46200232?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'scampi-butterflied', name: 'Butterflied (Shell-On)', description: 'Split open down the center for garlic butter oven bake.', yieldPercentage: 70 },
+    ],
+    healthBenefits: [
+      { title: 'Selenium Power', value: '85% RDA', description: 'Potent antioxidant defending against cellular stress.' },
+    ],
+  },
+  7: { // Surmai
+    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'surmai-tawa-fry', name: 'Tawa Fry Steaks', description: 'Uniform 12-15mm thick center-cut round steaks for frying.', yieldPercentage: 85 },
+      { id: 'surmai-curry-cut', name: 'Curry Cut (With Head & Tail)', description: 'Steaks plus head/tail pieces for rich Malvani gravy.', yieldPercentage: 80 },
+    ],
+    healthBenefits: [
+      { title: 'Omega-3 King', value: '1.8g EPA/DHA', description: 'Reduces bad cholesterol and improves arterial health.' },
+    ],
+  },
+  8: { // Basa Fillets
+    image: 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'basa-fillet', name: 'Boneless Skinless Fillets', description: 'Pure trimmed fillet slabs, 100% bone-free.', yieldPercentage: 100 },
+    ],
+    healthBenefits: [
+      { title: 'Zero Bone Risk', value: '100% Boneless', description: 'Safe for children and senior family members.' },
+    ],
+  },
+  9: { // Bangda
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'bangda-whole', name: 'Whole Cleaned (Slitted)', description: 'Gills & gut removed, deep side slits cut for masala stuffing.', yieldPercentage: 75 },
+    ],
+    healthBenefits: [
+      { title: 'Mega Omega-3', value: '2.2g EPA/DHA', description: 'Highest omega-3 concentration among coastal fish.' },
+    ],
+  },
+  10: { // White Pomfret
+    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'pomfret-whole-head', name: 'Whole Cleaned (With Head)', description: 'Gutted & descaled with side cuts for stuffed Pomfret fry.', yieldPercentage: 80 },
+      { id: 'pomfret-steaks', name: 'Pomfret Steaks / Slices', description: 'Sliced across into delicate white meat steaks.', yieldPercentage: 75 },
+    ],
+    healthBenefits: [
+      { title: 'Prized Delicacy', value: 'Sweet White Meat', description: 'Delicate flavor profile with zero fishy smell.' },
+    ],
+  },
+  11: { // White Prawns
+    image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'white-prawns-peeled', name: 'Peeled & Deveined', description: 'Cleaned, deshelled, and vein removed.', yieldPercentage: 60 },
+    ],
+    healthBenefits: [
+      { title: 'Low Fat Protein', value: '20g / 100g', description: 'Ideal for weight management.' },
+    ],
+  },
+  12: { // Rawas
+    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'rawas-steaks', name: 'Rawas Center Steaks', description: 'Thick bone-in steaks ideal for frying or gravy.', yieldPercentage: 82 },
+    ],
+    healthBenefits: [
+      { title: 'Indian Salmon', value: 'High Omega-3', description: 'Nourishes skin, hair, and cognitive health.' },
+    ],
+  },
+  13: { // Tilapia Fillets
+    image: 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'tilapia-fillet', name: 'Boneless Skinless Fillets', description: '100% boneless white fish fillet slabs.', yieldPercentage: 100 },
+    ],
+    healthBenefits: [
+      { title: '100% Boneless', value: 'Clean Cut', description: 'Hassle-free preparation.' },
+    ],
+  },
+  14: { // Chinese Pomfret
+    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'chinese-pomfret-whole', name: 'Whole Cleaned (Cross Slit)', description: 'Large fleshy pomfret gutted and slitted.', yieldPercentage: 80 },
+    ],
+    healthBenefits: [
+      { title: 'Melt-in-Mouth', value: 'High Collagen', description: 'Butter-soft texture with rich taste.' },
+    ],
+  },
+  15: { // Sardines
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'sardine-head-off', name: 'Whole Cleaned (Head-Off)', description: 'Head & guts removed, descaled for crisp fry.', yieldPercentage: 70 },
+    ],
+    healthBenefits: [
+      { title: 'Calcium Giant', value: '380mg / 100g', description: 'Soft edible bones rich in calcium.' },
+    ],
+  },
+  16: { // Halwa
+    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'halwa-steaks', name: 'Halwa Steaks', description: 'Firm dark-skin steaks ideal for tawa fry.', yieldPercentage: 80 },
+    ],
+    healthBenefits: [
+      { title: 'Iron Rich', value: '35% RDA', description: 'Supports healthy hemoglobin levels.' },
+    ],
+  },
+  17: { // Mud Crabs
+    image: 'https://images.unsplash.com/photo-1559737605-17ac46200232?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'crab-cleaned-halved', name: 'Cleaned & Halved (Cracked Claws)', description: 'Top shell removed, gills cleaned, split in half.', yieldPercentage: 60 },
+    ],
+    healthBenefits: [
+      { title: 'Zinc Champion', value: '100% RDA', description: 'Critical mineral for immune defense.' },
+    ],
+  },
+  18: { // Bombil
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+    cuts: [
+      { id: 'bombil-flattened', name: 'Cleaned & Flattened (Rava Fry Cut)', description: 'Gutted, head removed, gently pressed flat for crisp frying.', yieldPercentage: 75 },
+    ],
+    healthBenefits: [
+      { title: 'Mumbai Legend', value: 'Crispy Exterior', description: 'Iconic melt-in-mouth texture when fried with rava.' },
+    ],
+  },
+};
 
 const PRODUCTS = [
   { id: 1, name: 'Squids', marathiName: 'माकुळ', category: 'Prawns & Shellfish', subtitle: 'Tender Calamari', standard_cut: 'Cleaned & RO Washed', price_500g: 399, price_1kg: 749, tag: 'Fresh Catch' },
@@ -23,46 +197,80 @@ const PRODUCTS = [
   { id: 18, name: 'Bombil (Bombay Duck)', marathiName: 'बोंबील', category: 'Daily Catch', subtitle: 'Mumbai Classic', standard_cut: 'Cleaned & RO Washed', price_500g: 345, price_1kg: 549, tag: 'Mumbai Special' },
 ];
 
-function ProductCard({ product }) {
-  // Default to 1kg if 500g is null
-  const [weight, setWeight] = useState(product.price_500g ? '500g' : '1kg');
+const formatForDetailsPage = (item) => {
+  const specificData = PRODUCT_SPECIFIC_DATA[item.id] || {};
+  const defaultImage = specificData.image || item.image || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=800&auto=format&fit=crop&q=80';
 
-  // 2. Connect Zustand store directly inside card
+  return {
+    id: `matsya-${item.id}`,
+    name: item.name,
+    localName: item.marathiName ? `(${item.marathiName})` : '',
+    subtitle: `${item.subtitle} • ${item.category}`,
+    pricePerGrossKg: item.price_1kg,
+    images: [
+      defaultImage,
+      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=800&auto=format&fit=crop&q=80',
+    ],
+    cuts: specificData.cuts || [
+      { id: 'standard-cut', name: item.standard_cut || 'Cleaned & RO Washed', description: 'Gutted, descaled, washed in pure RO water and ready to cook.', yieldPercentage: 78 },
+      { id: 'curry-cut', name: 'Curry Cut (Steaks)', description: 'Sliced into thick, clean center-cut steaks for gravy.', yieldPercentage: 72 },
+    ],
+    weightPacks: item.price_500g ? [
+      { gross: 500, label: '500g Pack (Serves 2–3)' },
+      { gross: 1000, label: '1kg Pack (Serves 4–6)' },
+    ] : [
+      { gross: 1000, label: '1kg Pack (Serves 4–6)' },
+    ],
+    healthBenefits: specificData.healthBenefits || [
+      { title: 'Lean Protein', value: '20g per 100g', description: 'Promotes muscle repair and long-lasting daily energy.' },
+      { title: 'Rich in Omega-3', value: '1.2g EPA/DHA', description: 'Supports heart health and lowers inflammation.' },
+    ],
+  };
+};
+
+function ProductCard({ product, onSelectProduct }) {
+  const [weight, setWeight] = useState(product.price_500g ? '500g' : '1kg');
   const addItem = useCartStore((state) => state.addItem);
 
   const price = weight === '500g' ? product.price_500g : product.price_1kg;
   const originalPrice = Math.round(price * 1.25);
-  const serves = weight === '500g' ? 'Serves 2–3' : 'Serves 4–6';
+  const displayImage = PRODUCT_SPECIFIC_DATA[product.id]?.image || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=500&auto=format&fit=crop&q=60';
+
+  const handleOpenDetails = () => {
+    if (onSelectProduct) {
+      onSelectProduct(formatForDetailsPage(product));
+    }
+  };
 
   return (
-    <div className="rounded-2xl bg-[#16123D] border border-[#D5C582]/20 p-5 flex flex-col justify-between hover:border-[#D5C582]/40 transition-all duration-200 shadow-md">
-      {/* Top Tag & Serving Size */}
+    <div 
+      onClick={handleOpenDetails}
+      className="group rounded-2xl bg-[#16123D] border-[3px] border-[#D5C582]/20 hover:border-[#D5C582] p-5 flex flex-col justify-between hover:shadow-[0_10px_30px_rgba(213,197,130,0.35)] hover:-translate-y-1 transition-all duration-300 shadow-md cursor-pointer"
+    >
       <div>
         <div className="flex items-center justify-between text-[11px] mb-3">
           <span className="font-bold tracking-wider uppercase text-[#D5C582] bg-[#D5C582]/10 px-2.5 py-0.5 rounded-full">
             {product.tag || 'Fresh Landing'}
           </span>
-          <span className="text-[#FAF7EE]/70 text-xs font-medium">
-            {serves}
+          <span className="text-[#FAF7EE]/70 text-xs font-medium flex items-center gap-1 group-hover:text-[#D5C582] transition-colors">
+            <Eye className="w-3.5 h-3.5" /> Details
           </span>
         </div>
 
-        <div className="w-full h-44 my-3 rounded-xl overflow-hidden bg-[#100D2D] border border-white/5">
+        <div className="relative w-full h-44 my-3 rounded-xl overflow-hidden bg-[#100D2D] border border-white/5">
           <img
-            src={product.image}
+            src={displayImage}
             alt={product.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
               e.currentTarget.onerror = null;
-              // Shows a placeholder until you add real photo files to public/images/products/
               e.currentTarget.src = 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=500&auto=format&fit=crop&q=60';
             }}
           />
         </div>
 
-        {/* Catch Names */}
         <div className="flex items-baseline gap-2">
-          <h3 className="text-xl font-bold text-[#FAF7EE] tracking-tight font-['Sora',sans-serif]">
+          <h3 className="text-xl font-bold text-[#FAF7EE] tracking-tight font-['Sora',sans-serif] group-hover:text-[#D5C582] transition-colors">
             {product.name}
           </h3>
           <span className="text-sm font-semibold text-[#D5C582]">
@@ -74,9 +282,11 @@ function ProductCard({ product }) {
         </p>
       </div>
 
-      {/* Weight Selector Toggle */}
       {product.price_500g ? (
-        <div className="my-5 bg-[#100D2D] p-1 rounded-xl flex items-center border border-white/5">
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="my-5 bg-[#100D2D] p-1 rounded-xl flex items-center border border-white/5"
+        >
           <button
             type="button"
             onClick={() => setWeight('500g')}
@@ -107,7 +317,6 @@ function ProductCard({ product }) {
         </div>
       )}
 
-      {/* Pricing & Add to Cart */}
       <div className="pt-3 border-t border-white/10 flex items-center justify-between">
         <div>
           <div className="flex items-baseline gap-2">
@@ -123,10 +332,12 @@ function ProductCard({ product }) {
           </span>
         </div>
 
-        {/* 3. Direct Zustand Trigger */}
         <button
           type="button"
-          onClick={() => addItem(product, weight)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (addItem) addItem(product, weight);
+          }}
           className="py-2.5 px-4 rounded-xl bg-[#D5C582] hover:bg-[#E5D79E] text-[#1D184D] text-xs font-bold tracking-wider uppercase transition-all duration-150 active:scale-95 cursor-pointer"
         >
           Add to Cart
@@ -136,10 +347,9 @@ function ProductCard({ product }) {
   );
 }
 
-export default function ProductGrid() {
+export default function ProductGrid({ onSelectProduct }) {
   return (
     <section id="all-products" className="relative w-full bg-[#FAF7EE] select-none pb-28">
-      {/* 1. Navy Guarantee Bar */}
       <div className="relative w-full overflow-hidden leading-none">
         <div className="w-full bg-[#1D184D] border-y border-[#D5C582]/25 py-4 px-6 sm:px-12 shadow-sm">
           <div className="max-w-[1560px] mx-auto flex flex-wrap items-center justify-between gap-y-2 text-[10px] sm:text-xs font-semibold tracking-[0.28em] uppercase text-[#D5C582] font-['Sora',sans-serif]">
@@ -152,7 +362,6 @@ export default function ProductGrid() {
         </div>
       </div>
 
-      {/* 2. Header */}
       <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-16 mb-12">
         <span className="text-[11px] font-bold tracking-[0.28em] uppercase text-[#C2542D] block mb-2 font-['Sora',sans-serif]">
           Daily Harbor Catch
@@ -170,11 +379,14 @@ export default function ProductGrid() {
         </div>
       </div>
 
-      {/* 3. 18-Product Grid */}
       <div className="max-w-[1560px] mx-auto px-6 sm:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 sm:gap-8 p-2 overflow-visible">
           {PRODUCTS.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              onSelectProduct={onSelectProduct} 
+            />
           ))}
         </div>
       </div>

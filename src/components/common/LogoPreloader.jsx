@@ -248,9 +248,9 @@ export default function Preloader({
 
           <span
             ref={subtextRef}
-            className="text-[10px] font-semibold tracking-[0.35em] uppercase text-[#D7C37A] mt-4 opacity-0 translate-y-2 select-none"
+            className="text-[12px] font-semibold tracking-[0.35em] uppercase text-[#D7C37A] mt-4 opacity-0 translate-y-2 select-none"
           >
-            Sassoon Docks • Mumbai
+            • Mumbai •
           </span>
         </div>
 
