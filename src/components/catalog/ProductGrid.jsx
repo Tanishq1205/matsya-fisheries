@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, Search, X } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 
 // SPECIES-SPECIFIC CUTS & NUTRITION DATABASE
-const PRODUCT_SPECIFIC_DATA = {
+export const PRODUCT_SPECIFIC_DATA = {
   1: { // Squids
     image: 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=600&auto=format&fit=crop&q=80',
     cuts: [
@@ -176,7 +176,7 @@ const PRODUCT_SPECIFIC_DATA = {
   },
 };
 
-const PRODUCTS = [
+export const PRODUCTS = [
   { id: 1, name: 'Squids', marathiName: 'माकुळ', category: 'Prawns & Shellfish', subtitle: 'Tender Calamari', standard_cut: 'Cleaned & RO Washed', price_500g: 399, price_1kg: 749, tag: 'Fresh Catch' },
   { id: 2, name: 'Mushi', marathiName: 'मुशी', category: 'Daily Catch', subtitle: 'Baby Shark / Flake', standard_cut: 'Skinless & Cleaned', price_500g: 441, price_1kg: 699, tag: 'Daily Catch' },
   { id: 3, name: 'Shrimole', marathiName: 'श्रीमॉली', category: 'Prawns & Shellfish', subtitle: 'Small Coastal Prawns', standard_cut: 'Cleaned & RO Washed', price_500g: 301, price_1kg: 599, tag: 'Top Seller' },
@@ -197,13 +197,14 @@ const PRODUCTS = [
   { id: 18, name: 'Bombil (Bombay Duck)', marathiName: 'बोंबील', category: 'Daily Catch', subtitle: 'Mumbai Classic', standard_cut: 'Cleaned & RO Washed', price_500g: 345, price_1kg: 549, tag: 'Mumbai Special' },
 ];
 
-const formatForDetailsPage = (item) => {
+export const formatForDetailsPage = (item) => {
   const specificData = PRODUCT_SPECIFIC_DATA[item.id] || {};
   const defaultImage = specificData.image || item.image || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=800&auto=format&fit=crop&q=80';
 
   return {
     id: `matsya-${item.id}`,
     name: item.name,
+    category: item.category,
     localName: item.marathiName ? `(${item.marathiName})` : '',
     subtitle: `${item.subtitle} • ${item.category}`,
     pricePerGrossKg: item.price_1kg,
@@ -253,7 +254,7 @@ function ProductCard({ product, onSelectProduct }) {
             {product.tag || 'Fresh Landing'}
           </span>
           <span className="text-[#FAF7EE]/70 text-xs font-medium flex items-center gap-1 group-hover:text-[#D5C582] transition-colors">
-            <Eye className="w-3.5 h-3.5" /> Details
+            <Eye className="w-3.5 h-3.5" /> Click to view Details
           </span>
         </div>
 
@@ -348,6 +349,30 @@ function ProductCard({ product, onSelectProduct }) {
 }
 
 export default function ProductGrid({ onSelectProduct }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+
+  const categories = [
+    { key: 'ALL', label: 'All Catches' },
+    { key: 'Premium Sea Fish', label: 'Premium Sea Fish' },
+    { key: 'Prawns & Shellfish', label: 'Prawns & Shellfish' },
+    { key: 'Daily Catch', label: 'Daily Catch' },
+  ];
+
+  const filteredProducts = PRODUCTS.filter((product) => {
+    const matchesCategory =
+      selectedCategory === 'ALL' || product.category === selectedCategory;
+
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !query ||
+      product.name.toLowerCase().includes(query) ||
+      (product.marathiName && product.marathiName.toLowerCase().includes(query)) ||
+      (product.subtitle && product.subtitle.toLowerCase().includes(query));
+
+    return matchesCategory && matchesSearch;
+  });
+
   return (
     <section id="all-products" className="relative w-full bg-[#FAF7EE] select-none pb-28">
       <div className="relative w-full overflow-hidden leading-none">
@@ -362,7 +387,7 @@ export default function ProductGrid({ onSelectProduct }) {
         </div>
       </div>
 
-      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-16 mb-12">
+      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-16 mb-8">
         <span className="text-[11px] font-bold tracking-[0.28em] uppercase text-[#C2542D] block mb-2 font-['Sora',sans-serif]">
           Daily Harbor Catch
         </span>
@@ -374,21 +399,81 @@ export default function ProductGrid({ onSelectProduct }) {
             </span>
           </h2>
           <span className="text-xs font-semibold tracking-wider uppercase text-[#1D184D]/60 font-['Sora',sans-serif]">
-            18 Items Available
+            {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'} Available
           </span>
         </div>
       </div>
 
-      <div className="max-w-[1560px] mx-auto px-6 sm:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 sm:gap-8 p-2 overflow-visible">
-          {PRODUCTS.map((product) => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              onSelectProduct={onSelectProduct} 
+      {/* Filter & Search Bar */}
+      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 mb-10">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white/80 p-3 sm:p-4 rounded-2xl border border-[#1D184D]/10 shadow-sm backdrop-blur-md">
+          {/* Search Input Field */}
+          <div className="relative flex-1 min-w-[260px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1D184D]/50" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name or Marathi (Surmai, पापलेट, Bombil)..."
+              className="w-full pl-11 pr-10 py-2.5 bg-[#FAF7EE] border border-[#1D184D]/15 rounded-xl text-xs sm:text-sm font-semibold text-[#1D184D] placeholder-[#1D184D]/40 focus:outline-none focus:border-[#1D184D] transition-colors"
             />
-          ))}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-[#1D184D]/50 hover:text-[#1D184D]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
+            {categories.map((cat) => {
+              const isActive = selectedCategory === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.key)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#1D184D] text-[#D5C582] shadow-sm'
+                      : 'bg-[#FAF7EE] text-[#1D184D]/70 hover:text-[#1D184D] border border-[#1D184D]/10'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
+
+      <div className="max-w-[1560px] mx-auto px-6 sm:px-12">
+        {filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 sm:gap-8 p-2 overflow-visible">
+            {filteredProducts.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onSelectProduct={onSelectProduct} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="w-full py-16 text-center bg-white/50 rounded-2xl border border-[#1D184D]/10">
+            <p className="text-sm font-bold text-[#1D184D]">No catches found matching "{searchQuery}"</p>
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setSelectedCategory('ALL'); }}
+              className="mt-3 text-xs font-bold text-[#C2542D] uppercase tracking-wider hover:underline"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

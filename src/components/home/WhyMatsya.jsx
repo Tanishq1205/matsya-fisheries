@@ -37,18 +37,13 @@ export default function WhyMatsya() {
     <section id="why-matsya" className="relative w-full bg-[#1D184D] text-[#FAF7EE] select-none">
       
       {/* Fading Horizon Section Divider (Sand #FAF7EE -> Navy #1D184D) */}
-      <div className="w-full bg-[#FAF7EE] flex flex-col relative">
-        <div className="h-1 w-full bg-[#1D184D]/05" />
-        <div className="h-1.5 w-full bg-[#1D184D]/15" />
-        <div className="h-1 w-full bg-[#D5C582]/30" /> {/* Gold Horizon Line */}
-        <div className="h-2 w-full bg-[#1D184D]/30" />
-        <div className="h-1.5 w-full bg-[#C2542D]/40" /> {/* Terracotta Horizon Line */}
-        <div className="h-3 w-full bg-[#1D184D]/55" />
-        <div className="h-4 w-full bg-[#1D184D]/80" />
-        <div className="h-6 w-full bg-[#1D184D]" />
+      {/* Smooth Horizon Gradient with Embedded Accents */}
+<div className="w-full relative select-none overflow-hidden" aria-hidden="true">
+  {/* 1. Base Smooth Color Fade (Sand -> Navy) */}
+  <div className="w-full h-16 bg-gradient-to-b from-[#FAF7EE] via-[#1D184D]/40 to-[#1D184D]" />
 
-        
-      </div>
+  
+</div>
 
       {/* Main Section Content */}
       <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-8 pb-20 sm:pb-28">

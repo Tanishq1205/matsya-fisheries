@@ -1,300 +1,225 @@
 import React from 'react';
-import { Trash2, X, CreditCard, Sparkles, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
-import PincodeChecker from './PincodeChecker';
-
-const FREE_DELIVERY_THRESHOLD = 999;
-
-// Dynamically loads Razorpay SDK
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+import {
+  X,
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
 
 export default function CartDrawer() {
-  const {
-    cart,
-    isOpen,
-    closeCart,
-    updateQuantity,
-    removeItem,
-    clearCart,
-    getCartTotal,
-    pincode,
-    isServiceable,
-    deliverySlot,
-  } = useCartStore();
+  const isOpen = useCartStore((state) => state.isOpen);
+  const cart = useCartStore((state) => state.cart) || [];
+  const closeCart = useCartStore((state) => state.closeCart);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const deliverySlot = useCartStore((state) => state.deliverySlot) || 'Morning Catch (7:00 AM – 10:00 AM)';
+  const setDeliverySlot = useCartStore((state) => state.setDeliverySlot);
 
-  const subtotal = getCartTotal();
-  const amountForFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
-  const progressPercent = Math.min(
-    100,
-    (subtotal / FREE_DELIVERY_THRESHOLD) * 100
-  );
+  if (!isOpen) return null;
 
-  // Razorpay Payment Handler
-  const handleRazorpayCheckout = async () => {
-    if (!isServiceable) {
-      alert('Please enter and verify a valid Mumbai pincode before proceeding.');
-      return;
-    }
+  // Safe internal calculations
+  const totalItemCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
-    const res = await loadRazorpayScript();
-    if (!res) {
-      alert('Razorpay SDK failed to load. Please check your internet connection.');
-      return;
-    }
-
-    const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : 50;
-    const grandTotal = subtotal + deliveryFee;
-
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_HERE',
-      amount: grandTotal * 100,
-      currency: 'INR',
-      name: 'Matsya Fisheries',
-      description: `Fresh Catch Order (${cart.length} item${cart.length > 1 ? 's' : ''})`,
-      image: '/images/logo.png',
-      handler: function (response) {
-        alert(`Payment Successful!\nPayment ID: ${response.razorpay_payment_id}`);
-        clearCart();
-        closeCart();
-      },
-      prefill: {
-        name: '',
-        email: '',
-        contact: '',
-      },
-      notes: {
-        pincode: pincode,
-        delivery_slot: deliverySlot,
-      },
-      theme: {
-        color: '#C2542D',
-      },
-    };
-
-    const paymentObject = new window.Razorpay(options);
-    paymentObject.open();
-  };
+  // Dynamic Free Delivery threshold logic
+  const FREE_DELIVERY_THRESHOLD = 799;
+  const isFreeDelivery = subtotal >= FREE_DELIVERY_THRESHOLD;
+  const amountNeeded = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
+  const progressPercentage = subtotal === 0 ? 0 : Math.min(100, (subtotal / FREE_DELIVERY_THRESHOLD) * 100);
 
   return (
-    <div
-      className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ease-in-out select-none ${
-        isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-      }`}
-    >
+    <div className="fixed inset-0 z-50 overflow-hidden font-['Sora',sans-serif] select-none">
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-[#100D2D]/80 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
-          isOpen ? 'opacity-100' : 'opacity-0'
-        }`}
+        className="fixed inset-0 bg-[#000000]/60 backdrop-blur-sm transition-opacity"
         onClick={closeCart}
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6">
-        <div
-          className={`w-screen max-w-md bg-gradient-to-b from-[#1D184D] via-[#16123D] to-[#100D2D] text-[#FAF7EE] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.6)] border-l border-[#D5C582]/30 transform transition-transform duration-300 ease-in-out relative overflow-hidden ${
-            isOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          {/* Subtle Ambient Warm Glow behind the drawer */}
-          <div className="absolute top-1/4 -right-20 w-80 h-80 rounded-full bg-[#D5C582]/10 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-1/3 -left-20 w-80 h-80 rounded-full bg-[#C2542D]/10 blur-3xl pointer-events-none" />
-
-          {/* Top Warm Gold Accent Strip */}
-          <div className="h-1.5 w-full bg-gradient-to-r from-[#D5C582] via-[#C2542D] to-[#D5C582]" />
-
-          {/* Header */}
-          <div className="p-5 border-b border-[#D5C582]/20 flex items-center justify-between bg-[#1D184D]/90 backdrop-blur-xl relative z-10">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-[#D5C582]/10 border border-[#D5C582]/30 flex items-center justify-center text-[#D5C582]">
-                <ShoppingBag className="w-5 h-5 text-[#D5C582]" />
+      {/* Drawer Panel */}
+      <div className="fixed inset-y-0 right-0 max-w-full flex">
+        <div className="w-screen max-w-md bg-[#16123D] text-[#FAF7EE] shadow-2xl flex flex-col border-l border-white/10">
+          
+          {/* HEADER */}
+          <div className="p-5 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#D5C582]">
+                <ShoppingBag className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold tracking-[0.2em] text-[#FAF7EE] uppercase font-['Sora',sans-serif]">
-                  Your Basket
+                <h2 className="text-sm font-extrabold tracking-wider uppercase text-[#FAF7EE]">
+                  YOUR BASKET
                 </h2>
-                <span className="text-[10px] font-semibold text-[#D5C582] uppercase tracking-wider block">
-                  100% Edible Net Weight Guarantee
-                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="bg-[#C2542D] text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">
-                {cart.reduce((sum, item) => sum + item.quantity, 0)} Pcs
+              <span className="px-3 py-1 rounded-full bg-[#C2542D] text-white text-xs font-bold">
+                {totalItemCount} Pcs
               </span>
               <button
+                type="button"
                 onClick={closeCart}
-                className="p-2 text-[#FAF7EE]/70 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer"
+                className="text-white/60 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Express Delivery Progress Bar */}
-          <div className="bg-[#16123D] p-4 border-b border-[#D5C582]/15 relative z-10">
-            <p className="text-xs text-[#FAF7EE] font-medium mb-2.5 flex items-center justify-between">
-              {amountForFreeDelivery > 0 ? (
-                <>
-                  <span className="text-white/80">Express Mumbai Delivery</span>
-                  <span className="text-xs font-bold text-[#D5C582] bg-[#D5C582]/10 px-2.5 py-0.5 rounded-md border border-[#D5C582]/25">
-                    Add ₹{amountForFreeDelivery} for FREE
+          {/* DYNAMIC FREE EXPRESS DELIVERY BANNER */}
+          <div className="px-5 pt-4 pb-2 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <div className="flex items-center gap-2 text-[#D5C582]">
+                <Sparkles className="w-4 h-4 text-[#D5C582]" />
+                {subtotal === 0 ? (
+                  <span className="text-white/70">Add items worth ₹{FREE_DELIVERY_THRESHOLD} for Free Express Delivery</span>
+                ) : isFreeDelivery ? (
+                  <span className="text-[#6EE7A8]">🎉 Free Express Delivery Unlocked!</span>
+                ) : (
+                  <span className="text-[#FAF7EE]">
+                    Add <strong className="text-[#D5C582]">₹{amountNeeded}</strong> more for Free Delivery
                   </span>
-                </>
-              ) : (
-                <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs">
-                  <Sparkles className="w-4 h-4 text-[#D5C582]" /> 🎉 Free Express Delivery Unlocked!
-                </span>
-              )}
-            </p>
+                )}
+              </div>
+            </div>
 
-            <div className="w-full bg-[#100D2D] h-2 rounded-full overflow-hidden border border-[#D5C582]/20 p-0.5">
+            {/* DYNAMIC PROGRESS BAR */}
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#D5C582] via-[#E06B43] to-[#C2542D] h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(213,197,130,0.5)]"
-                style={{ width: `${progressPercent}%` }}
+                className="h-full bg-gradient-to-r from-[#C2542D] to-[#D5C582] transition-all duration-300 ease-out"
+                style={{ width: `${progressPercentage}%` }}
               />
             </div>
           </div>
 
-          {/* Middle Content Area (Pincode + Cart Items) */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 relative z-10 scrollbar-thin scrollbar-thumb-[#D5C582]/20">
+          {/* SCROLLABLE BODY */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
+            
+            {/* PREFERRED CATCH WINDOW SELECTOR CARD */}
+            <div className="bg-[#100D2D] border border-white/10 rounded-2xl p-4 space-y-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#FAF7EE]/60 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-[#D5C582]" />
+                PREFERRED CATCH WINDOW
+              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDeliverySlot && setDeliverySlot('Morning Catch (7:00 AM – 10:00 AM)')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    (deliverySlot || '').includes('Morning')
+                      ? 'bg-[#1A1548] border-[#D5C582] text-[#FAF7EE]'
+                      : 'bg-[#1A1548]/40 border-white/10 text-[#FAF7EE]/50 hover:border-white/20'
+                  }`}
+                >
+                  <p className="text-xs font-bold">Morning Catch</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">7:00 AM — 10:00 AM</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeliverySlot && setDeliverySlot('Evening Landing (4:00 PM – 7:00 PM)')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    (deliverySlot || '').includes('Evening')
+                      ? 'bg-[#1A1548] border-[#D5C582] text-[#FAF7EE]'
+                      : 'bg-[#1A1548]/40 border-white/10 text-[#FAF7EE]/50 hover:border-white/20'
+                  }`}
+                >
+                  <p className="text-xs font-bold">Evening Landing</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">4:00 PM — 7:00 PM</p>
+                </button>
+              </div>
+            </div>
+
+            {/* CART ITEM CARDS */}
             {cart.length === 0 ? (
-              <div className="text-center py-20 text-[#FAF7EE]/40 flex flex-col items-center">
-                <div className="w-20 h-20 rounded-3xl bg-[#1D184D] border-2 border-[#D5C582]/30 flex items-center justify-center text-3xl mb-4 shadow-xl">
-                  🦐
-                </div>
-                <p className="text-lg font-bold text-[#FAF7EE] font-['Sora',sans-serif]">Your Basket is Empty</p>
-                <p className="text-xs text-[#FAF7EE]/60 mt-1 max-w-[220px]">
-                  Select fresh coastal catches from the catalog to get started.
-                </p>
+              <div className="py-12 text-center text-white/40 text-sm font-semibold">
+                Your basket is empty.
               </div>
             ) : (
-              <>
-                {cart.length > 0 && <PincodeChecker />}
+              cart.map((item) => (
+                <div
+                  key={item.cartItemId || `${item.id}-${item.weight}`}
+                  className="bg-[#100D2D] border border-white/10 rounded-2xl p-3.5 flex items-center justify-between gap-3"
+                >
+                  <img
+                    src={item.image || '/images/placeholder-fish.jpg'}
+                    alt={item.name || 'Fish product'}
+                    className="w-14 h-14 object-cover rounded-xl border border-white/10 shrink-0 bg-[#1A1548]"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=200&q=80';
+                    }}
+                  />
 
-                {cart.map((item) => (
-                  <div
-                    key={item.cartItemId}
-                    className="group bg-[#100D2D]/90 p-4 rounded-2xl border border-[#D5C582]/20 
-                    flex items-center justify-between gap-3.5 shadow-md transition-all duration-300"
-                  >
-                    {/* Item Thumbnail */}
-                    <div className="w-16 h-16 rounded-xl bg-[#1D184D] border border-[#D5C582]/20 overflow-hidden shrink-0 flex items-center justify-center  transition-transform duration-300">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src =
-                            'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=150&auto=format&fit=crop&q=60';
-                        }}
-                      />
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-[#FAF7EE] truncate">
+                      {item.name || 'Fresh Catch'} {item.marathiName && <span className="font-normal text-white/70">({item.marathiName})</span>}
+                    </h4>
+                    <p className="text-[11px] text-white/60 mt-0.5">
+                      {item.weight} • {item.cut || 'Cleaned'}
+                    </p>
+                    <p className="text-sm font-bold text-[#FAF7EE] mt-1">
+                      ₹{(item.price || 0) * (item.quantity || 1)}
+                    </p>
+                  </div>
 
-                    {/* Item Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline space-x-1.5 truncate">
-                        <h4 className="font-bold text-[#FAF7EE] text-sm truncate font-['Sora',sans-serif]">
-                          {item.name}
-                        </h4>
-                        {item.marathiName && (
-                          <span className="text-xs text-[#D5C582] font-semibold shrink-0">
-                            ({item.marathiName})
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-[11px] font-medium text-[#FAF7EE]/65 mt-0.5">
-                        {item.weight} • <span className="text-[#D5C582]">{item.cut}</span>
-                      </p>
-
-                      <p className="text-base font-black text-[#D5C582] mt-1 tracking-tight">
-                        ₹{item.price * item.quantity}
-                      </p>
-                    </div>
-
-                    {/* Quantity Selector & Trash */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center space-x-2 bg-[#16123D] px-2.5 py-1.5 rounded-xl border border-[#D5C582]/25">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.cartItemId, -1)}
-                          className="text-[#FAF7EE]/70 hover:text-[#D5C582] font-black text-sm px-1 cursor-pointer transition-colors"
-                        >
-                          -
-                        </button>
-                        <span className="text-xs font-black text-[#FAF7EE] w-4 text-center font-mono">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.cartItemId, 1)}
-                          className="text-[#FAF7EE]/70 hover:text-[#D5C582] font-black text-sm px-1 cursor-pointer transition-colors"
-                        >
-                          +
-                        </button>
-                      </div>
-
+                  {/* Quantity Counter & Trash */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center border border-white/15 bg-[#1A1548] rounded-xl overflow-hidden px-2 py-1 gap-2">
                       <button
                         type="button"
-                        onClick={() => removeItem(item.cartItemId)}
-                        className="p-2 text-[#FAF7EE]/40 hover:text-[#C2542D] hover:bg-[#C2542D]/15 rounded-xl transition-all cursor-pointer"
-                        title="Remove item"
+                        onClick={() => updateQuantity && updateQuantity(item.cartItemId, -1)}
+                        className="text-white/70 hover:text-white cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="text-xs font-bold min-w-[12px] text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity && updateQuantity(item.cartItemId, 1)}
+                        className="text-white/70 hover:text-white cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
                       </button>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeItem && removeItem(item.cartItemId)}
+                      className="text-white/40 hover:text-red-400 p-1 cursor-pointer transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                ))}
-              </>
+                </div>
+              ))
             )}
+
           </div>
 
-          {/* Subtotal & Checkout Footer */}
+          {/* FOOTER CHECKOUT BUTTON */}
           {cart.length > 0 && (
-            <div className="p-5 border-t border-[#D5C582]/20 bg-[#1D184D]/95 backdrop-blur-xl space-y-4 shadow-2xl relative z-10">
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="text-[11px] font-bold tracking-widest text-[#FAF7EE]/60 uppercase block">
-                    Estimated Subtotal
-                  </span>
-                  <span className="text-[10px] text-[#D5C582] font-semibold">
-                    Includes RO Cleaning & Custom Cutting
-                  </span>
-                </div>
-                <span className="text-2xl font-black text-[#D5C582] font-['Sora',sans-serif] tracking-tight">
-                  ₹{subtotal}
-                </span>
+            <div className="p-5 border-t border-white/10 bg-[#100D2D] space-y-3">
+              <div className="flex items-center justify-between text-sm font-bold text-[#FAF7EE]">
+                <span>Total Amount</span>
+                <span className="text-[#D5C582] text-lg">₹{subtotal}</span>
               </div>
-
               <button
                 type="button"
-                onClick={handleRazorpayCheckout}
-                disabled={!isServiceable}
-                className={`w-full font-black py-4 rounded-2xl transition-all shadow-xl text-xs tracking-[0.2em] uppercase flex items-center justify-center gap-3 cursor-pointer active:scale-[0.98] ${
-                  isServiceable
-                    ? 'bg-[#C2542D] hover:bg-[#A84320] text-white border border-[#D5C582]/40 shadow-[0_4px_20px_rgba(194,84,45,0.4)]'
-                    : 'bg-white/10 text-white/30 border border-white/5 cursor-not-allowed'
-                }`}
+                disabled={subtotal === 0}
+                className="w-full py-3.5 px-6 rounded-2xl bg-[#D5C582] hover:bg-[#c5b572] disabled:opacity-40 text-[#1D184D] font-extrabold text-sm uppercase tracking-wider transition-all cursor-pointer shadow-lg active:scale-[0.98]"
               >
-                <CreditCard className="w-4 h-4 text-[#D5C582]" />
-                {isServiceable ? 'Proceed to Checkout' : 'Verify Pincode to Checkout'}
+                PROCEED TO CHECKOUT
               </button>
             </div>
           )}
+
         </div>
       </div>
     </div>

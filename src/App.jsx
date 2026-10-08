@@ -10,10 +10,13 @@ import WhyMatsya from './components/home/WhyMatsya';
 import TeamStorySection from './components/home/TeamStorySection';
 import CartDrawer from './components/checkout/CartDrawer';
 import ProductDetailsPage from './components/product/ProductDetailsPage';
+import Toast from './components/common/Toast';
+import LocationModal from './components/common/LocationModal';
+import Footer from './components/common/Footer';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  // Restore the open product if the page is reloaded while on a product entry
+  // Restore open product on page reload
   const [selectedProduct, setSelectedProduct] = useState(
     () => window.history.state?.product ?? null
   );
@@ -21,7 +24,6 @@ export default function App() {
 
   // Where the user was on the home page before opening a product
   const savedScrollRef = useRef(0);
-  // When true, the next return to the home page goes to the very top (logo click)
   const returnToTopRef = useRef(false);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function App() {
       smoothWheel: true,
       wheelMultiplier: 1,
       touchMultiplier: 1.5,
-      anchors: true, // lets #story, #bulk, #collaborations links work with Lenis
+      anchors: true,
     });
 
     lenisRef.current = lenis;
@@ -51,11 +53,11 @@ export default function App() {
     };
   }, []);
 
-  // Browser back / forward buttons
+  // Browser back / forward button handling
   useEffect(() => {
     const onPopState = (e) => {
       const product = e.state?.product ?? null;
-      if (product) savedScrollRef.current = window.scrollY; // going forward into a product
+      if (product) savedScrollRef.current = window.scrollY;
       setSelectedProduct(product);
     };
 
@@ -63,23 +65,39 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  // Scroll handling when switching between the home page and a product page
+  // Reset scroll whenever selectedProduct opens or swaps
   useEffect(() => {
     const lenis = lenisRef.current;
 
     if (selectedProduct) {
-      // Opening a product: start at the top of the product page
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
+      const forceScrollToTop = () => {
+        // Reset browser scroll
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
 
-      if (lenis) lenis.scrollTo(0, { immediate: true });
-      const t = setTimeout(() => lenis?.resize(), 50);
-      return () => clearTimeout(t);
+        // Reset Lenis smooth scroll engine & kill active momentum
+        if (lenis) {
+          lenis.stop();
+          lenis.scrollTo(0, { immediate: true });
+          lenis.start();
+          lenis.resize();
+        }
+      };
+
+      // Run immediately
+      forceScrollToTop();
+
+      // Run in RAF and brief timeout to handle React DOM re-renders & image shifts
+      const rafId = requestAnimationFrame(() => {
+        forceScrollToTop();
+        setTimeout(forceScrollToTop, 60);
+      });
+
+      return () => cancelAnimationFrame(rafId);
     }
 
-    // Back on the home page: restore the spot the user left (the product grid),
-    // or go to the top if they clicked the logo.
+    // Back on home page: restore catalog scroll position or scroll to top
     const target = returnToTopRef.current ? 0 : savedScrollRef.current;
     returnToTopRef.current = false;
 
@@ -93,7 +111,7 @@ export default function App() {
     }, 50);
 
     return () => clearTimeout(t);
-  }, [selectedProduct]);
+  }, [selectedProduct?.id, selectedProduct?.name, selectedProduct]);
 
   const handlePreloaderComplete = () => {
     setIsLoading(false);
@@ -103,16 +121,19 @@ export default function App() {
   };
 
   const handleSelectProduct = (productData) => {
-    savedScrollRef.current = window.scrollY;
-    // Add a history entry so the browser back button returns to the catalog
-    window.history.pushState({ view: 'product', product: productData }, '');
+    if (selectedProduct) {
+      // Already on a product page: replace state in place
+      window.history.replaceState({ view: 'product', product: productData }, '');
+    } else {
+      savedScrollRef.current = window.scrollY;
+      window.history.pushState({ view: 'product', product: productData }, '');
+    }
     setSelectedProduct(productData);
   };
 
-  // Close the product page, keeping browser history in sync
   const closeProduct = () => {
     if (window.history.state?.view === 'product') {
-      window.history.back(); // popstate handler clears selectedProduct
+      window.history.back();
     } else {
       setSelectedProduct(null);
     }
@@ -122,7 +143,6 @@ export default function App() {
     closeProduct();
   };
 
-  // Logo / brand name click: close product page if open, otherwise scroll to top via Lenis
   const handleLogoClick = () => {
     if (selectedProduct) {
       returnToTopRef.current = true;
@@ -142,6 +162,7 @@ export default function App() {
       {isLoading && <LogoPreloader onComplete={handlePreloaderComplete} />}
 
       <Navbar onLogoClick={handleLogoClick} />
+      <LocationModal />
 
       <main className="relative w-full min-h-screen">
         {selectedProduct ? (
@@ -149,6 +170,7 @@ export default function App() {
             key={selectedProduct.id || selectedProduct.name}
             product={selectedProduct}
             onBack={handleBackToCatalog}
+            onSelectProduct={handleSelectProduct}
           />
         ) : (
           <div className="w-full flex flex-col">
@@ -160,8 +182,9 @@ export default function App() {
           </div>
         )}
       </main>
-
+      <Footer />
       <CartDrawer />
+      <Toast />
     </div>
   );
 }

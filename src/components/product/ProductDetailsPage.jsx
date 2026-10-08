@@ -10,6 +10,7 @@ import {
   Utensils 
 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
+import RelatedProducts from './RelatedProducts';
 
 const DEFAULT_FALLBACK_PRODUCT = {
   id: 'matsya-default',
@@ -34,7 +35,7 @@ const DEFAULT_FALLBACK_PRODUCT = {
   ]
 };
 
-export default function ProductDetailsPage({ product, onBack }) {
+export default function ProductDetailsPage({ product, onBack, onSelectProduct }) {
   const cartStore = useCartStore();
   const addItem = cartStore?.addItem || cartStore?.addToCart || (() => {});
 
@@ -57,22 +58,35 @@ export default function ProductDetailsPage({ product, onBack }) {
     ? currentProduct.healthBenefits 
     : DEFAULT_FALLBACK_PRODUCT.healthBenefits;
 
-  // Active Selections
+  // Active Selections State
   const [selectedImage, setSelectedImage] = useState(images[0]);
   const [selectedCut, setSelectedCut] = useState(cuts[0]);
   const [selectedWeightPack, setSelectedWeightPack] = useState(weightPacks[0]);
   const [quantity, setQuantity] = useState(1);
 
-  // Reset scroll and state when switching selected species
+  // Sync state & scroll to top whenever selected product changes
   useEffect(() => {
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-    setSelectedImage(images[0]);
-    setSelectedCut(cuts[0]);
-    setSelectedWeightPack(weightPacks[0]);
+
+    const freshImages = Array.isArray(currentProduct.images) && currentProduct.images.length > 0 
+      ? currentProduct.images 
+      : [currentProduct.image || DEFAULT_FALLBACK_PRODUCT.images[0]];
+
+    const freshCuts = Array.isArray(currentProduct.cuts) && currentProduct.cuts.length > 0 
+      ? currentProduct.cuts 
+      : DEFAULT_FALLBACK_PRODUCT.cuts;
+
+    const freshWeightPacks = Array.isArray(currentProduct.weightPacks) && currentProduct.weightPacks.length > 0 
+      ? currentProduct.weightPacks 
+      : DEFAULT_FALLBACK_PRODUCT.weightPacks;
+
+    setSelectedImage(freshImages[0]);
+    setSelectedCut(freshCuts[0]);
+    setSelectedWeightPack(freshWeightPacks[0]);
     setQuantity(1);
-  }, [product]);
+  }, [currentProduct?.id, currentProduct?.name]);
 
   const pricePerKg = currentProduct.pricePerGrossKg || currentProduct.price_1kg || 700;
   const grossGrams = selectedWeightPack?.gross || 500;
@@ -178,7 +192,7 @@ export default function ProductDetailsPage({ product, onBack }) {
                 {currentProduct.name}
               </h1>
               <p className="text-lg sm:text-xl font-semibold text-[#1D184D]/70 mt-1">
-                {currentProduct.localName}
+                {currentProduct.localName || currentProduct.marathiName}
               </p>
               <p className="text-sm text-[#1D184D]/80 mt-3 leading-relaxed">
                 {currentProduct.subtitle}
@@ -303,6 +317,12 @@ export default function ProductDetailsPage({ product, onBack }) {
           </div>
 
         </div>
+
+        {/* You May Also Like Rail */}
+        <RelatedProducts
+          currentProduct={currentProduct}
+          onSelectProduct={onSelectProduct}
+        />
       </div>
     </div>
   );
