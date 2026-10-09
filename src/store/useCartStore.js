@@ -7,22 +7,24 @@ export const useCartStore = create(
     (set, get) => ({
       cart: [],
       isOpen: false,
+      isCheckoutOpen: false,
       deliverySlot: 'Morning Catch (7:00 AM – 10:00 AM)',
 
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
+      openCheckout: () => set({ isOpen: false, isCheckoutOpen: true }),
+      closeCheckout: () => set({ isCheckoutOpen: false }),
+
       setDeliverySlot: (slot) => set({ deliverySlot: slot }),
 
       addItem: (product, weight = '1kg', cut = 'Cleaned & RO Washed') => {
         if (!product) return;
 
-        // Normalize weight format
         const normWeight = (weight || '1kg').toString().toLowerCase();
         const is500g = normWeight.includes('500');
 
-        // Robust price calculation checking all possible database field keys
         let price = 0;
         if (is500g) {
           price = Number(
@@ -61,7 +63,7 @@ export const useCartStore = create(
               price: price || updatedCart[existingIndex].price || 0,
               quantity: updatedCart[existingIndex].quantity + 1,
             };
-            return { cart: updatedCart, isOpen: false }; // 👈 Drawer stays closed on Add To Cart
+            return { cart: updatedCart, isOpen: false };
           }
 
           const newItem = {
@@ -76,10 +78,9 @@ export const useCartStore = create(
             quantity: 1,
           };
 
-          return { cart: [...currentCart, newItem], isOpen: false }; // 👈 Drawer stays closed on Add To Cart
+          return { cart: [...currentCart, newItem], isOpen: false };
         });
 
-        // Trigger Toast Notification
         const marathiText = product.marathiName ? ` (${product.marathiName})` : '';
         const weightLabel = is500g ? '500g Pack' : '1kg Pack';
 
@@ -116,6 +117,8 @@ export const useCartStore = create(
         }));
       },
 
+      clearCart: () => set({ cart: [] }),
+
       getCartTotal: () => {
         const cart = get().cart || [];
         return cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
@@ -128,6 +131,11 @@ export const useCartStore = create(
     }),
     {
       name: 'matsya-cart-storage',
+      // ONLY persist cart items and delivery slot. UI modal states always start as false.
+      partialize: (state) => ({
+        cart: state.cart,
+        deliverySlot: state.deliverySlot,
+      }),
     }
   )
 );

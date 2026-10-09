@@ -10,10 +10,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export default function CartDrawer() {
+export default function CartDrawer({ onOpenCheckout }) {
   const isOpen = useCartStore((state) => state.isOpen);
   const cart = useCartStore((state) => state.cart) || [];
   const closeCart = useCartStore((state) => state.closeCart);
+  const openCheckout = useCartStore((state) => state.openCheckout);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const deliverySlot = useCartStore((state) => state.deliverySlot) || 'Morning Catch (7:00 AM – 10:00 AM)';
@@ -30,6 +31,15 @@ export default function CartDrawer() {
   const isFreeDelivery = subtotal >= FREE_DELIVERY_THRESHOLD;
   const amountNeeded = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
   const progressPercentage = subtotal === 0 ? 0 : Math.min(100, (subtotal / FREE_DELIVERY_THRESHOLD) * 100);
+
+  const handleProceedToCheckout = () => {
+    closeCart();
+    if (onOpenCheckout) {
+      onOpenCheckout();
+    } else if (openCheckout) {
+      openCheckout();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden font-['Sora',sans-serif] select-none">
@@ -140,65 +150,68 @@ export default function CartDrawer() {
                 Your basket is empty.
               </div>
             ) : (
-              cart.map((item) => (
-                <div
-                  key={item.cartItemId || `${item.id}-${item.weight}`}
-                  className="bg-[#100D2D] border border-white/10 rounded-2xl p-3.5 flex items-center justify-between gap-3"
-                >
-                  <img
-                    src={item.image || '/images/placeholder-fish.jpg'}
-                    alt={item.name || 'Fish product'}
-                    className="w-14 h-14 object-cover rounded-xl border border-white/10 shrink-0 bg-[#1A1548]"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=200&q=80';
-                    }}
-                  />
+              cart.map((item) => {
+                const itemKey = item.cartItemId || `${item.id}-${item.weight}-${item.cut}`;
+                return (
+                  <div
+                    key={itemKey}
+                    className="bg-[#100D2D] border border-white/10 rounded-2xl p-3.5 flex items-center justify-between gap-3"
+                  >
+                    <img
+                      src={item.image || 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=200&q=80'}
+                      alt={item.name || 'Fish product'}
+                      className="w-14 h-14 object-cover rounded-xl border border-white/10 shrink-0 bg-[#1A1548]"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=200&q=80';
+                      }}
+                    />
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-[#FAF7EE] truncate">
-                      {item.name || 'Fresh Catch'} {item.marathiName && <span className="font-normal text-white/70">({item.marathiName})</span>}
-                    </h4>
-                    <p className="text-[11px] text-white/60 mt-0.5">
-                      {item.weight} • {item.cut || 'Cleaned'}
-                    </p>
-                    <p className="text-sm font-bold text-[#FAF7EE] mt-1">
-                      ₹{(item.price || 0) * (item.quantity || 1)}
-                    </p>
-                  </div>
-
-                  {/* Quantity Counter & Trash */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center border border-white/15 bg-[#1A1548] rounded-xl overflow-hidden px-2 py-1 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity && updateQuantity(item.cartItemId, -1)}
-                        className="text-white/70 hover:text-white cursor-pointer"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="text-xs font-bold min-w-[12px] text-center">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity && updateQuantity(item.cartItemId, 1)}
-                        className="text-white/70 hover:text-white cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-[#FAF7EE] truncate">
+                        {item.name || 'Fresh Catch'} {item.marathiName && <span className="font-normal text-white/70">({item.marathiName})</span>}
+                      </h4>
+                      <p className="text-[11px] text-white/60 mt-0.5">
+                        {item.weight} • {item.cut || 'Cleaned'}
+                      </p>
+                      <p className="text-sm font-bold text-[#FAF7EE] mt-1">
+                        ₹{(item.price || 0) * (item.quantity || 1)}
+                      </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => removeItem && removeItem(item.cartItemId)}
-                      className="text-white/40 hover:text-red-400 p-1 cursor-pointer transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Quantity Counter & Trash */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center border border-white/15 bg-[#1A1548] rounded-xl overflow-hidden px-2 py-1 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity && updateQuantity(itemKey, -1)}
+                          className="text-white/70 hover:text-white cursor-pointer"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-xs font-bold min-w-[12px] text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity && updateQuantity(itemKey, 1)}
+                          className="text-white/70 hover:text-white cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeItem && removeItem(itemKey)}
+                        className="text-white/40 hover:text-red-400 p-1 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
 
           </div>
@@ -212,6 +225,7 @@ export default function CartDrawer() {
               </div>
               <button
                 type="button"
+                onClick={handleProceedToCheckout}
                 disabled={subtotal === 0}
                 className="w-full py-3.5 px-6 rounded-2xl bg-[#D5C582] hover:bg-[#c5b572] disabled:opacity-40 text-[#1D184D] font-extrabold text-sm uppercase tracking-wider transition-all cursor-pointer shadow-lg active:scale-[0.98]"
               >

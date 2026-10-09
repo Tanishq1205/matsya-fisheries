@@ -1,31 +1,38 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import gsap from 'gsap';
+import { getAllProducts } from '../../services/productService';
+import { formatForDetailsPage } from '../catalog/ProductGrid';
 
 const FEATURED_ITEMS = [
   {
     id: 'pomfret',
     name: 'Silver Pomfret (Paplet)',
+    matchQuery: 'pomfret',
     image: '/images/products/silver-pomfrets-card.jpg',
   },
   {
     id: 'surmai',
     name: 'King Fish (Surmai)',
+    matchQuery: 'surmai',
     image: '/images/products/surmai-card.jpg',
   },
   {
     id: 'prawns',
     name: 'Tiger Prawns (Kolambi)',
+    matchQuery: 'tiger',
     image: '/images/products/tiger-prawns-card.jpg',
   },
   {
     id: 'bombil',
     name: 'Bombay Duck (Bombil)',
+    matchQuery: 'bombil',
     image: '/images/products/bombil-card.jpg',
   },
   {
     id: 'squid',
     name: 'Squid (Makul)',
+    matchQuery: 'squid',
     image: '/images/products/squid-card.jpg',
   },
 ];
@@ -43,6 +50,16 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [dbProducts, setDbProducts] = useState([]);
+
+  // Fetch live Supabase products to map card clicks to database product data
+  useEffect(() => {
+    async function loadDbData() {
+      const { data } = await getAllProducts();
+      if (data) setDbProducts(data);
+    }
+    loadDbData();
+  }, []);
 
   // Viewport Reveal Animation (IntersectionObserver + GSAP)
   useEffect(() => {
@@ -118,13 +135,31 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
     }
   };
 
+  const handleCardClick = (item) => {
+    if (!onSelectProduct) return;
+
+    // Find matching live product in database
+    const foundProduct = dbProducts.find((p) =>
+      p.name && p.name.toLowerCase().includes(item.matchQuery.toLowerCase())
+    );
+
+    if (foundProduct) {
+      const formatted = typeof formatForDetailsPage === 'function'
+        ? formatForDetailsPage(foundProduct)
+        : foundProduct;
+      onSelectProduct(formatted);
+    } else {
+      onSelectProduct(item.name);
+    }
+  };
+
   return (
     <section
       id="featured-products"
       ref={sectionRef}
       className="relative w-full bg-[#FAF7EE] overflow-hidden select-none pb-24 -mt-2 sm:-mt-4 z-20"
     >
-      {/* 1. Divider Bar (Flushed against Hero wave) */}
+      {/* 1. Divider Bar */}
       <div className="w-full bg-[#1D184D] border-y border-[#2B2568] py-3.5 px-4 sm:px-8 relative z-20">
         <div className="max-w-[1560px] mx-auto flex items-center justify-between text-[11px] sm:text-xs font-semibold tracking-[0.25em] uppercase text-[#D5C582] font-['Sora',sans-serif]">
           <span>Dock-to-Door Mumbai</span>
@@ -178,7 +213,7 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
               className="w-[330px] sm:w-[420px] md:w-[480px] lg:w-[520px] shrink-0"
             >
               <div
-                onClick={() => onSelectProduct && onSelectProduct(item.name)}
+                onClick={() => handleCardClick(item)}
                 className="rounded-[32px] overflow-hidden bg-[#16123D] border-[3px] border-transparent hover:border-[#D5C582] transition-all duration-300 hover:-translate-y-1 cursor-pointer"
               >
                 <img

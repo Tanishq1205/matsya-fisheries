@@ -9,22 +9,48 @@ import ProductGrid from './components/catalog/ProductGrid';
 import WhyMatsya from './components/home/WhyMatsya';
 import TeamStorySection from './components/home/TeamStorySection';
 import CartDrawer from './components/checkout/CartDrawer';
+import CheckoutPage from './components/checkout/CheckoutPage';
 import ProductDetailsPage from './components/product/ProductDetailsPage';
 import Toast from './components/common/Toast';
 import LocationModal from './components/common/LocationModal';
 import Footer from './components/common/Footer';
+import { useCartStore } from './store/useCartStore';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  // Restore open product on page reload
-  const [selectedProduct, setSelectedProduct] = useState(
-    () => window.history.state?.product ?? null
-  );
+  const isCheckoutOpen = useCartStore((state) => state.isCheckoutOpen);
+  const closeCheckout = useCartStore((state) => state.closeCheckout);
+  
+  // Always start at home catalog on page refresh
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const lenisRef = useRef(null);
 
-  // Where the user was on the home page before opening a product
+  // Remembers scroll position on home catalog
   const savedScrollRef = useRef(0);
   const returnToTopRef = useRef(false);
+  const prevCheckoutOpenRef = useRef(isCheckoutOpen);
+
+  // Clear lingering history state & ensure checkout is closed on initial page refresh
+  useEffect(() => {
+    if (window.history.state?.view) {
+      window.history.replaceState(null, '');
+    }
+    closeCheckout();
+  }, [closeCheckout]);
+
+  // Sync Checkout view with Browser History API
+  useEffect(() => {
+    if (isCheckoutOpen && !prevCheckoutOpenRef.current) {
+      // Checkout opened -> push history entry so Chrome Back button works
+      if (window.history.state?.view !== 'checkout') {
+        window.history.pushState(
+          { view: 'checkout', product: selectedProduct },
+          ''
+        );
+      }
+    }
+    prevCheckoutOpenRef.current = isCheckoutOpen;
+  }, [isCheckoutOpen, selectedProduct]);
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -53,11 +79,19 @@ export default function App() {
     };
   }, []);
 
-  // Browser back / forward button handling
+  // Handle Chrome Back / Forward buttons (popstate)
   useEffect(() => {
     const onPopState = (e) => {
-      const product = e.state?.product ?? null;
-      if (product) savedScrollRef.current = window.scrollY;
+      const state = e.state;
+
+      // Close or open checkout based on browser history state
+      if (state?.view === 'checkout') {
+        useCartStore.getState().openCheckout();
+      } else {
+        useCartStore.getState().closeCheckout();
+      }
+
+      const product = state?.product ?? null;
       setSelectedProduct(product);
     };
 
@@ -65,53 +99,39 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  // Reset scroll whenever selectedProduct opens or swaps
+  // Scroll Management
   useEffect(() => {
     const lenis = lenisRef.current;
 
-    if (selectedProduct) {
-      const forceScrollToTop = () => {
-        // Reset browser scroll
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+    if (isCheckoutOpen || selectedProduct) {
+      // Reset scroll position to top for Product Details or Checkout
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
 
-        // Reset Lenis smooth scroll engine & kill active momentum
-        if (lenis) {
-          lenis.stop();
-          lenis.scrollTo(0, { immediate: true });
-          lenis.start();
-          lenis.resize();
-        }
-      };
-
-      // Run immediately
-      forceScrollToTop();
-
-      // Run in RAF and brief timeout to handle React DOM re-renders & image shifts
-      const rafId = requestAnimationFrame(() => {
-        forceScrollToTop();
-        setTimeout(forceScrollToTop, 60);
-      });
-
-      return () => cancelAnimationFrame(rafId);
-    }
-
-    // Back on home page: restore catalog scroll position or scroll to top
-    const target = returnToTopRef.current ? 0 : savedScrollRef.current;
-    returnToTopRef.current = false;
-
-    const t = setTimeout(() => {
       if (lenis) {
+        lenis.stop();
+        lenis.scrollTo(0, { immediate: true });
+        lenis.start();
         lenis.resize();
-        lenis.scrollTo(target, { immediate: true });
-      } else {
-        window.scrollTo(0, target);
       }
-    }, 50);
+    } else {
+      // Returning to Home: restore exact saved scroll position
+      const targetScroll = returnToTopRef.current ? 0 : savedScrollRef.current;
+      returnToTopRef.current = false;
 
-    return () => clearTimeout(t);
-  }, [selectedProduct?.id, selectedProduct?.name, selectedProduct]);
+      const timer = setTimeout(() => {
+        if (lenis) {
+          lenis.resize();
+          lenis.scrollTo(targetScroll, { immediate: true });
+        } else {
+          window.scrollTo(0, targetScroll);
+        }
+      }, 30);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedProduct, isCheckoutOpen]);
 
   const handlePreloaderComplete = () => {
     setIsLoading(false);
@@ -121,21 +141,21 @@ export default function App() {
   };
 
   const handleSelectProduct = (productData) => {
-    if (selectedProduct) {
-      // Already on a product page: replace state in place
-      window.history.replaceState({ view: 'product', product: productData }, '');
-    } else {
-      savedScrollRef.current = window.scrollY;
+    if (!selectedProduct) {
+      // Record exact scroll Y position before leaving home
+      const currentY = lenisRef.current?.scroll ?? window.scrollY ?? 0;
+      savedScrollRef.current = currentY;
       window.history.pushState({ view: 'product', product: productData }, '');
+    } else {
+      window.history.replaceState({ view: 'product', product: productData }, '');
     }
     setSelectedProduct(productData);
   };
 
   const closeProduct = () => {
+    setSelectedProduct(null);
     if (window.history.state?.view === 'product') {
-      window.history.back();
-    } else {
-      setSelectedProduct(null);
+      window.history.replaceState(null, '');
     }
   };
 
@@ -144,6 +164,9 @@ export default function App() {
   };
 
   const handleLogoClick = () => {
+    if (isCheckoutOpen) {
+      closeCheckout();
+    }
     if (selectedProduct) {
       returnToTopRef.current = true;
       closeProduct();
@@ -165,23 +188,32 @@ export default function App() {
       <LocationModal />
 
       <main className="relative w-full min-h-screen">
-        {selectedProduct ? (
-          <ProductDetailsPage
-            key={selectedProduct.id || selectedProduct.name}
-            product={selectedProduct}
-            onBack={handleBackToCatalog}
-            onSelectProduct={handleSelectProduct}
-          />
+        {isCheckoutOpen ? (
+          <CheckoutPage onBackToCatalog={() => setSelectedProduct(null)} />
         ) : (
-          <div className="w-full flex flex-col">
-            <Hero isPreloaderFinished={!isLoading} />
-            <FeaturedSpotlights onSelectProduct={handleSelectProduct} />
-            <ProductGrid onSelectProduct={handleSelectProduct} />
-            <WhyMatsya />
-            <TeamStorySection />
-          </div>
+          <>
+            {/* Main Home Page Container */}
+            <div className={selectedProduct ? 'hidden' : 'w-full flex flex-col'}>
+              <Hero isPreloaderFinished={!isLoading} />
+              <FeaturedSpotlights onSelectProduct={handleSelectProduct} />
+              <ProductGrid onSelectProduct={handleSelectProduct} />
+              <WhyMatsya />
+              <TeamStorySection />
+            </div>
+
+            {/* Product Details View */}
+            {selectedProduct && (
+              <ProductDetailsPage
+                key={selectedProduct.id || selectedProduct.name}
+                product={selectedProduct}
+                onBack={handleBackToCatalog}
+                onSelectProduct={handleSelectProduct}
+              />
+            )}
+          </>
         )}
       </main>
+
       <Footer />
       <CartDrawer />
       <Toast />

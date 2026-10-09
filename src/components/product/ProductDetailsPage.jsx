@@ -16,14 +16,19 @@ const DEFAULT_FALLBACK_PRODUCT = {
   id: 'matsya-default',
   name: 'Fresh Coastal Catch',
   localName: '(ताजी मासोळी)',
+  marathiName: 'ताजी मासोळी',
   subtitle: 'Daily dock landing cleaned with pure RO water and customized to order.',
+  badgeText: '100% DOCK FRESH',
+  landingOrigin: 'Cleaned & RO Washed',
+  price_500g: 399,
+  price_1kg: 750,
   pricePerGrossKg: 750,
   images: [
     'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=800&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=800&auto=format&fit=crop&q=80',
   ],
   cuts: [
-    { id: 'std-cut', name: 'Cleaned & RO Washed', description: 'Gutted, descaled, washed in pure RO water and ready to cook.', yieldPercentage: 75 }
+    { id: 'std-cut', name: 'Cleaned & RO Washed', description: 'Gutted, descaled, washed in pure RO water and ready to cook.', yield: '~75% Yield', yieldPercentage: 75 }
   ],
   weightPacks: [
     { gross: 500, label: '500g Pack (Serves 2–3)' },
@@ -33,6 +38,18 @@ const DEFAULT_FALLBACK_PRODUCT = {
     { title: 'Lean Protein', value: '20g / 100g', description: 'Supports daily energy and recovery.' },
     { title: 'Omega-3', value: '1.2g EPA/DHA', description: 'Promotes cardiovascular health.' }
   ]
+};
+
+// Helper function to extract numeric yield from string or number format
+const parseYieldPercentage = (cut) => {
+  if (!cut) return 75;
+  if (typeof cut.yieldPercentage === 'number') return cut.yieldPercentage;
+  if (typeof cut.yield === 'number') return cut.yield;
+  if (typeof cut.yield === 'string') {
+    const parsed = parseInt(cut.yield.replace(/[^0-9]/g, ''), 10);
+    return isNaN(parsed) ? 75 : parsed;
+  }
+  return 75;
 };
 
 export default function ProductDetailsPage({ product, onBack, onSelectProduct }) {
@@ -88,17 +105,30 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
     setQuantity(1);
   }, [currentProduct?.id, currentProduct?.name]);
 
-  const pricePerKg = currentProduct.pricePerGrossKg || currentProduct.price_1kg || 700;
   const grossGrams = selectedWeightPack?.gross || 500;
-  const yieldPct = selectedCut?.yieldPercentage || 75;
+  const yieldPct = parseYieldPercentage(selectedCut);
   const netGrams = Math.round((grossGrams * yieldPct) / 100);
-  const calculatedPrice = Math.round((pricePerKg * (grossGrams / 1000)));
+
+  // Dynamic Price Calculation matching 500g vs 1kg DB columns
+  const getUnitPrice = () => {
+    if (grossGrams === 500 && currentProduct.price_500g) {
+      return currentProduct.price_500g;
+    }
+    if (grossGrams === 1000 && (currentProduct.price_1kg || currentProduct.pricePerGrossKg)) {
+      return currentProduct.price_1kg || currentProduct.pricePerGrossKg;
+    }
+    const fallbackRate = currentProduct.pricePerGrossKg || currentProduct.price_1kg || currentProduct.price_500g || 700;
+    return Math.round((fallbackRate * grossGrams) / 1000);
+  };
+
+  const calculatedPrice = getUnitPrice();
 
   const handleAddToCart = () => {
     const itemToAdd = {
-      id: `${currentProduct.id}-${selectedCut?.id || 'cut'}-${grossGrams}g`,
+      id: `${currentProduct.id}-${selectedCut?.name || 'cut'}-${grossGrams}g`,
+      productId: currentProduct.id,
       name: currentProduct.name,
-      marathiName: currentProduct.localName || currentProduct.marathiName,
+      marathiName: currentProduct.localName || (currentProduct.marathiName ? `(${currentProduct.marathiName})` : ''),
       cut: selectedCut?.name || 'Cleaned',
       weight: `${grossGrams}g`,
       grossWeight: `${grossGrams}g`,
@@ -138,7 +168,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
                 }}
               />
               <span className="absolute top-4 left-4 bg-[#C2542D] text-white text-[11px] font-bold tracking-widest uppercase px-3.5 py-1.5 rounded-full shadow-md">
-                100% DOCK FRESH
+                {currentProduct.badgeText || '100% DOCK FRESH'}
               </span>
             </div>
 
@@ -147,6 +177,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
                 {images.map((img, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => setSelectedImage(img)}
                     className={`relative w-24 h-20 rounded-2xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
                       selectedImage === img
@@ -186,13 +217,19 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
           <div className="lg:col-span-6 flex flex-col gap-6">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-[#C2542D] uppercase mb-1">
-                <span>Catch of the Day</span> • <span>Mumbai Coastal Landing</span>
+                <span>{currentProduct.landingOrigin || 'Cleaned & RO Washed'}</span>
+                {currentProduct.category && (
+                  <>
+                    <span>•</span>
+                    <span>{currentProduct.category}</span>
+                  </>
+                )}
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1D184D] leading-tight uppercase">
                 {currentProduct.name}
               </h1>
               <p className="text-lg sm:text-xl font-semibold text-[#1D184D]/70 mt-1">
-                {currentProduct.localName || currentProduct.marathiName}
+                {currentProduct.localName || (currentProduct.marathiName ? `(${currentProduct.marathiName})` : '')}
               </p>
               <p className="text-sm text-[#1D184D]/80 mt-3 leading-relaxed">
                 {currentProduct.subtitle}
@@ -216,30 +253,34 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
               </label>
 
               <div className="grid grid-cols-1 gap-3">
-                {cuts.map((cut) => (
-                  <button
-                    key={cut.id || cut.name}
-                    type="button"
-                    onClick={() => setSelectedCut(cut)}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
-                      selectedCut?.name === cut.name
-                        ? 'bg-[#1D184D] text-[#FAF7EE] border-[#1D184D] shadow-md'
-                        : 'bg-white/80 text-[#1D184D] border-[#1D184D]/10 hover:border-[#1D184D]/40'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-bold uppercase tracking-wider">{cut.name}</span>
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                        selectedCut?.name === cut.name ? 'bg-[#D5C582] text-[#1D184D]' : 'bg-[#1D184D]/10 text-[#1D184D]'
-                      }`}>
-                        ~{cut.yieldPercentage}% Yield
-                      </span>
-                    </div>
-                    <p className={`text-xs ${selectedCut?.name === cut.name ? 'text-[#FAF7EE]/80' : 'text-[#1D184D]/60'}`}>
-                      {cut.description}
-                    </p>
-                  </button>
-                ))}
+                {cuts.map((cut, index) => {
+                  const currentYield = parseYieldPercentage(cut);
+                  const isSelected = selectedCut?.name === cut.name;
+                  return (
+                    <button
+                      key={cut.id || cut.name || index}
+                      type="button"
+                      onClick={() => setSelectedCut(cut)}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#1D184D] text-[#FAF7EE] border-[#1D184D] shadow-md'
+                          : 'bg-white/80 text-[#1D184D] border-[#1D184D]/10 hover:border-[#1D184D]/40'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-bold uppercase tracking-wider">{cut.name}</span>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                          isSelected ? 'bg-[#D5C582] text-[#1D184D]' : 'bg-[#1D184D]/10 text-[#1D184D]'
+                        }`}>
+                          {cut.yield || `~${currentYield}% Yield`}
+                        </span>
+                      </div>
+                      <p className={`text-xs ${isSelected ? 'text-[#FAF7EE]/80' : 'text-[#1D184D]/60'}`}>
+                        {cut.description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -272,7 +313,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
               <Scale className="w-6 h-6 text-[#1D184D] shrink-0" />
               <div className="text-xs text-[#1D184D]">
                 <span className="font-bold uppercase block mb-0.5">Matsya Weight Promise</span>
-                Gross Weight: <strong>{grossGrams}g</strong> → Net Edible Weight after cleaning: <strong>~{netGrams}g</strong> (No waste paid for).
+                Gross Weight: <strong>{grossGrams * quantity}g</strong> → Net Edible Weight after cleaning: <strong>~{netGrams * quantity}g</strong> (No waste paid for).
               </div>
             </div>
 
@@ -318,7 +359,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
 
         </div>
 
-        {/* You May Also Like Rail */}
+        {/* Related Products Rail */}
         <RelatedProducts
           currentProduct={currentProduct}
           onSelectProduct={onSelectProduct}
