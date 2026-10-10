@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Quote, ShieldCheck, MapPin, Anchor, Award } from 'lucide-react';
+import { ScaleEdgeBottomDivider } from '../common/WhyMatsyaDividers';
 
 const FOUNDER = {
   name: 'Omkar Gaikwad',
@@ -20,45 +21,13 @@ export default function TeamStorySection() {
   return (
     <section id="story" className="relative w-full bg-[#FAF7EE] select-none">
       
-      {/* Layered Coastal Depth Divider (Navy #1D184D -> Sand #FAF7EE) */}
-      <div className="relative w-full bg-[#1D184D] leading-none overflow-hidden">
-        <svg
-          className="relative block w-full h-16 sm:h-24 lg:h-28"
-          viewBox="0 0 1440 120"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          {/* Layer 1: Terracotta Accent Depth */}
-          <path
-            d="M0,20 C300,90 600,10 900,70 C1200,120 1350,30 1440,50 L1440,120 L0,120 Z"
-            fill="#C2542D"
-            fillOpacity="0.35"
-          />
-
-          {/* Layer 2: Gold Accent Seam */}
-          <path
-            d="M0,35 C350,110 650,20 950,85 C1220,130 1380,45 1440,65 L1440,120 L0,120 Z"
-            fill="#D5C582"
-            fillOpacity="0.45"
-          />
-
-          {/* Layer 3: Solid Sand (#FAF7EE) Foreground */}
-          <path
-            d="M0,50 C380,115 680,25 980,92 C1250,125 1390,55 1440,75 L1440,120 L0,120 Z"
-            fill="#FAF7EE"
-          />
-        </svg>
-
-        {/* Floating Center Badge on the Wave Seam */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center gap-2 bg-[#FAF7EE] border-2 border-[#1D184D] text-[#1D184D] text-[10px] font-black tracking-[0.25em] uppercase px-4 py-2 rounded-full shadow-2xl">
-          <Anchor className="w-3.5 h-3.5 text-[#C2542D]" />
-          <span>MUMBAI HERITAGE</span>
-        </div>
-      </div>
+      {/* Fish-scale edge: navy (Why Matsya) -> sand, with the heritage badge on the seam */}
+      <ScaleEdgeBottomDivider>
+        
+      </ScaleEdgeBottomDivider>
 
       {/* Main Content Area */}
-      <div className="max-w-[1440px] mx-auto px-6 sm:px-12 pt-8 pb-20 sm:pb-28">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-12 pt-12 sm:pt-14 pb-20 sm:pb-28">
         
         {/* Section Header */}
         <div className="flex items-center gap-3 mb-6">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, RefreshCw, Fish, MapPin, Anchor } from 'lucide-react';
+import { ScaleEdgeDivider } from '../common/WhyMatsyaDividers'
 
 const FEATURES = [
   {
@@ -32,21 +33,15 @@ const FEATURES = [
   },
 ];
 
+
 export default function WhyMatsya() {
   return (
     <section id="why-matsya" className="relative w-full bg-[#1D184D] text-[#FAF7EE] select-none">
       
-      {/* Fading Horizon Section Divider (Sand #FAF7EE -> Navy #1D184D) */}
-      {/* Smooth Horizon Gradient with Embedded Accents */}
-<div className="w-full relative select-none overflow-hidden" aria-hidden="true">
-  {/* 1. Base Smooth Color Fade (Sand -> Navy) */}
-  <div className="w-full h-16 bg-gradient-to-b from-[#FAF7EE] via-[#1D184D]/40 to-[#1D184D]" />
-
-  
-</div>
+      <ScaleEdgeDivider /> 
 
       {/* Main Section Content */}
-      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-8 pb-20 sm:pb-28">
+      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-4 pb-20 sm:pb-28">
         {/* Header */}
         <div className="max-w-4xl mb-14">
           <span className="text-xs font-black tracking-[0.28em] text-[#D5C582] uppercase block mb-3 font-['Sora',sans-serif]">

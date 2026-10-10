@@ -20,6 +20,7 @@ const WHATSAPP_BULK_URL = `https://wa.me/${MATSYA_WHATSAPP_NUMBER}?text=${BULK_I
 export default function Footer({
   logoSrc = '/images/matsya-logo-navbar.png',
   onLogoClick,
+  onOpenTrack,
 }) {
   const handleLogoClick = (e) => {
     e.preventDefault();
@@ -145,6 +146,15 @@ export default function Footer({
               </a>
             </li>
             <li>
+              <button
+                type="button"
+                onClick={onOpenTrack}
+                className="hover:text-[#D5C582] transition-colors cursor-pointer text-left"
+              >
+                Track Your Order
+              </button>
+            </li>
+            <li>
               <a
                 href={WHATSAPP_BULK_URL}
                 target="_blank"
@@ -158,7 +168,7 @@ export default function Footer({
           </ul>
         </div>
 
-        {/* Col 3: Serviceable Zones (Concise list from delivery_zones table) */}
+        {/* Col 3: Serviceable Zones */}
         <div className="space-y-3">
           <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#D5C582]">
             Serviceable Zones

@@ -10,6 +10,7 @@ import WhyMatsya from './components/home/WhyMatsya';
 import TeamStorySection from './components/home/TeamStorySection';
 import CartDrawer from './components/checkout/CartDrawer';
 import CheckoutPage from './components/checkout/CheckoutPage';
+import OrderTrackingPage from './components/tracking/OrderTrackingPage';
 import ProductDetailsPage from './components/product/ProductDetailsPage';
 import Toast from './components/common/Toast';
 import LocationModal from './components/common/LocationModal';
@@ -18,6 +19,7 @@ import { useCartStore } from './store/useCartStore';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isTrackOpen, setIsTrackOpen] = useState(false);
   const isCheckoutOpen = useCartStore((state) => state.isCheckoutOpen);
   const closeCheckout = useCartStore((state) => state.closeCheckout);
   
@@ -30,12 +32,13 @@ export default function App() {
   const returnToTopRef = useRef(false);
   const prevCheckoutOpenRef = useRef(isCheckoutOpen);
 
-  // Clear lingering history state & ensure checkout is closed on initial page refresh
+  // Clear lingering history state & ensure checkout/track are closed on initial page refresh
   useEffect(() => {
     if (window.history.state?.view) {
       window.history.replaceState(null, '');
     }
     closeCheckout();
+    setIsTrackOpen(false);
   }, [closeCheckout]);
 
   // Sync Checkout view with Browser History API
@@ -84,11 +87,16 @@ export default function App() {
     const onPopState = (e) => {
       const state = e.state;
 
-      // Close or open checkout based on browser history state
+      // Close or open checkout/track based on browser history state
       if (state?.view === 'checkout') {
         useCartStore.getState().openCheckout();
+        setIsTrackOpen(false);
+      } else if (state?.view === 'track') {
+        setIsTrackOpen(true);
+        useCartStore.getState().closeCheckout();
       } else {
         useCartStore.getState().closeCheckout();
+        setIsTrackOpen(false);
       }
 
       const product = state?.product ?? null;
@@ -103,8 +111,8 @@ export default function App() {
   useEffect(() => {
     const lenis = lenisRef.current;
 
-    if (isCheckoutOpen || selectedProduct) {
-      // Reset scroll position to top for Product Details or Checkout
+    if (isCheckoutOpen || isTrackOpen || selectedProduct) {
+      // Reset scroll position to top for Product Details, Checkout, or Track Order
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
@@ -131,12 +139,26 @@ export default function App() {
 
       return () => clearTimeout(timer);
     }
-  }, [selectedProduct, isCheckoutOpen]);
+  }, [selectedProduct, isCheckoutOpen, isTrackOpen]);
 
   const handlePreloaderComplete = () => {
     setIsLoading(false);
     if (lenisRef.current) {
       lenisRef.current.start();
+    }
+  };
+
+  const handleOpenTrackPage = () => {
+    if (!isTrackOpen) {
+      window.history.pushState({ view: 'track' }, '');
+      setIsTrackOpen(true);
+    }
+  };
+
+  const handleCloseTrackPage = () => {
+    setIsTrackOpen(false);
+    if (window.history.state?.view === 'track') {
+      window.history.replaceState(null, '');
     }
   };
 
@@ -167,6 +189,9 @@ export default function App() {
     if (isCheckoutOpen) {
       closeCheckout();
     }
+    if (isTrackOpen) {
+      setIsTrackOpen(false);
+    }
     if (selectedProduct) {
       returnToTopRef.current = true;
       closeProduct();
@@ -184,11 +209,13 @@ export default function App() {
     <div className="relative min-h-screen bg-[#FAF7EE] text-[#1D184D]">
       {isLoading && <LogoPreloader onComplete={handlePreloaderComplete} />}
 
-      <Navbar onLogoClick={handleLogoClick} />
+      <Navbar onLogoClick={handleLogoClick} onOpenTrack={handleOpenTrackPage} />
       <LocationModal />
 
       <main className="relative w-full min-h-screen">
-        {isCheckoutOpen ? (
+        {isTrackOpen ? (
+          <OrderTrackingPage onBackToCatalog={handleCloseTrackPage} />
+        ) : isCheckoutOpen ? (
           <CheckoutPage onBackToCatalog={() => setSelectedProduct(null)} />
         ) : (
           <>
@@ -214,7 +241,7 @@ export default function App() {
         )}
       </main>
 
-      <Footer />
+      <Footer onLogoClick={handleLogoClick} onOpenTrack={handleOpenTrackPage} />
       <CartDrawer />
       <Toast />
     </div>

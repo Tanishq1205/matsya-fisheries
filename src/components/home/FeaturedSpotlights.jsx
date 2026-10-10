@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import gsap from 'gsap';
 import { getAllProducts } from '../../services/productService';
 import { formatForDetailsPage } from '../catalog/ProductGrid';
+import SectionDivider from '../common/SectionDivider';
 
 const FEATURED_ITEMS = [
   {
@@ -157,24 +158,16 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
     <section
       id="featured-products"
       ref={sectionRef}
-      className="relative w-full bg-[#FAF7EE] overflow-hidden select-none pb-24 -mt-2 sm:-mt-4 z-20"
+      className="relative w-full bg-[#FAF7EE] overflow-hidden select-none pb-24 z-20"
     >
-      {/* 1. Divider Bar */}
-      <div className="w-full bg-[#1D184D] border-y border-[#2B2568] py-3.5 px-4 sm:px-8 relative z-20">
-        <div className="max-w-[1560px] mx-auto flex items-center justify-between text-[11px] sm:text-xs font-semibold tracking-[0.25em] uppercase text-[#D5C582] font-['Sora',sans-serif]">
-          <span>Dock-to-Door Mumbai</span>
-          <span className="hidden md:inline text-white/40">•</span>
-          <span className="hidden md:inline">100% Edible Net Weight</span>
-          <span className="hidden sm:inline text-white/40">•</span>
-          <span>Daily Coastal Landing</span>
-        </div>
-      </div>
+      {/* 1. Divider */}
+      <SectionDivider className="!pt-8 sm:!pt-10 !pb-2" />
 
       {/* 2. Headline */}
       <div
         ref={headlineRef}
         style={GUTTER_STYLE}
-        className="pt-14 sm:pt-18 mb-8 w-full"
+        className="pt-6 sm:pt-8 mb-8 w-full"
       >
         <span className="text-[11px] font-bold tracking-[0.28em] uppercase text-[#C2542D] block mb-2 font-['Sora',sans-serif]">
           Daily Selection

@@ -147,89 +147,93 @@ export default function CheckoutPage({ onBackToCatalog }) {
   };
 
   const handleSubmitOrder = async (e) => {
-    e.preventDefault();
-    setErrorMessage('');
+  e.preventDefault();
+  setErrorMessage('');
 
-    if (!formData.phone.trim() || !formData.firstName.trim() || !formData.streetAddress.trim() || !formData.pincode.trim()) {
-      setErrorMessage('Please fill in all required fields marked with *');
-      return;
+  if (!formData.phone.trim() || !formData.firstName.trim() || !formData.streetAddress.trim() || !formData.pincode.trim()) {
+    setErrorMessage('Please fill in all required fields marked with *');
+    return;
+  }
+
+  if (!isServiceable) {
+    setErrorMessage(`Sorry, PIN Code ${formData.pincode} is currently unserviceable.`);
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+    const fullAddress = `${formData.streetAddress.trim()}${formData.apartment ? ', ' + formData.apartment.trim() : ''}, ${formData.city}, ${formData.state}`;
+
+    // Mapped directly to your Supabase orders table schema
+    const orderPayload = {
+      customer_name: fullName,
+      customer_phone: formData.phone.trim(),
+      delivery_address: fullAddress,
+      landmark: formData.landmark.trim() || null,
+      pincode: formData.pincode.trim(),
+      items: cart,
+      subtotal: Number(subtotal),
+      delivery_fee: Number(deliveryFee),
+      total_amount: Number(totalAmount),
+      delivery_slot: deliverySlot,
+      payment_method: formData.paymentMethod,
+      payment_status: 'pending',
+      order_status: 'placed',
+      created_at: new Date().toISOString(),
+    };
+
+    // Insert order and select generated order_number and id
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([orderPayload])
+      .select('id, order_number')
+      .single();
+
+    if (error) {
+      console.error('Supabase orders insert error:', error.message);
+      throw error;
     }
 
-    if (!isServiceable) {
-      setErrorMessage(`Sorry, PIN Code ${formData.pincode} is currently unserviceable in our database.`);
-      return;
-    }
+    // Format friendly display order number
+    const generatedId = data?.order_number
+      ? `#MATSYA-${data.order_number}`
+      : `#MATSYA-${data?.id?.slice(0, 6).toUpperCase() || Math.floor(100000 + Math.random() * 900000)}`;
 
-    setIsSubmitting(true);
-
-    try {
-      const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-      const fullAddress = `${formData.streetAddress.trim()}${formData.apartment ? ', ' + formData.apartment.trim() : ''}, ${formData.city}, ${formData.state}`;
-
-      const orderPayload = {
-        customer_name: fullName,
+    // Save customer details locally for pre-filling next time
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY,
+      JSON.stringify({
         phone: formData.phone.trim(),
-        email: formData.email.trim() || null,
-        address: fullAddress,
-        landmark: formData.landmark.trim() || null,
+        email: formData.email.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        streetAddress: formData.streetAddress.trim(),
+        apartment: formData.apartment.trim(),
+        landmark: formData.landmark.trim(),
         pincode: formData.pincode.trim(),
-        items: cart,
-        subtotal,
-        delivery_fee: deliveryFee,
-        total_amount: totalAmount,
-        delivery_slot: deliverySlot,
-        payment_method: formData.paymentMethod,
-        order_note: formData.orderNote.trim() || null,
-        status: 'placed',
-        created_at: new Date().toISOString(),
-      };
+        city: formData.city,
+        state: formData.state,
+      })
+    );
 
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([orderPayload])
-        .select('id')
-        .single();
+    setOrderSuccess({
+      orderId: generatedId,
+      totalAmount,
+      customerName: fullName,
+      deliverySlot,
+      fullAddress,
+    });
 
-      if (error) {
-        console.warn('Note on orders table insertion:', error.message);
-      }
-
-      const generatedId = data?.id
-        ? `#MATSYA-${data.id.toString().slice(0, 8).toUpperCase()}`
-        : `#MATSYA-${Math.floor(100000 + Math.random() * 900000)}`;
-
-      localStorage.setItem(
-        LOCAL_STORAGE_KEY,
-        JSON.stringify({
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          streetAddress: formData.streetAddress.trim(),
-          apartment: formData.apartment.trim(),
-          landmark: formData.landmark.trim(),
-          pincode: formData.pincode.trim(),
-          city: formData.city,
-          state: formData.state,
-        })
-      );
-
-      setOrderSuccess({
-        orderId: generatedId,
-        totalAmount,
-        customerName: fullName,
-        deliverySlot,
-        fullAddress,
-      });
-
-      if (clearCart) clearCart();
-    } catch (err) {
-      console.error('Order submission error:', err);
-      setErrorMessage('Failed to place order. Please check connection and try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    if (clearCart) clearCart();
+  } catch (err) {
+    console.error('Order submission error:', err);
+    setErrorMessage('Failed to place order. Please check your connection and try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleReturnHome = () => {
   if (window.history.state?.view === 'checkout') {

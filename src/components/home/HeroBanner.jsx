@@ -114,20 +114,6 @@ export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = fal
         </div>
 
       </div>
-
-      {/* Bottom Wave Divider */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none pointer-events-none z-10 translate-y-[1px]">
-        <svg
-          className="relative block w-full h-12 sm:h-18 md:h-22 text-[#1D184D]"
-          viewBox="0 0 1200 120"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0,0 C150,90 350,-40 500,50 C650,140 900,10 1200,40 L1200,120 L0,120 Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
     </section>
   );
 }

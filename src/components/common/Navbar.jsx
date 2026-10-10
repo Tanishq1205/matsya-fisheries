@@ -14,6 +14,7 @@ export default function Navbar({
   cartCount: propCartCount,
   onOpenCart,
   onLogoClick,
+  onOpenTrack,
   logoSrc = '/images/matsya-logo-navbar.png',
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -47,6 +48,14 @@ export default function Navbar({
     }
   };
 
+  const handleTrackClick = (e) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    if (onOpenTrack) {
+      onOpenTrack();
+    }
+  };
+
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event) {
@@ -77,57 +86,55 @@ export default function Navbar({
   }, []);
 
   // Check Pincode directly in Supabase `serviceable_pincodes` table
-  // Check Pincode directly in Supabase `serviceable_pincodes` table
-const verifyPincode = async (inputPin) => {
-  // Fallback to pincodeInput state if inputPin is missing or event-based
-  const rawPin = typeof inputPin === 'string' && inputPin.length > 0 ? inputPin : pincodeInput;
-  const cleanPin = String(rawPin || '').replace(/\D/g, '').trim();
+  const verifyPincode = async (inputPin) => {
+    const rawPin = typeof inputPin === 'string' && inputPin.length > 0 ? inputPin : pincodeInput;
+    const cleanPin = String(rawPin || '').replace(/\D/g, '').trim();
 
-  if (!cleanPin || cleanPin.length !== 6) {
-    setStatus({ type: 'error', message: 'Enter a valid 6-digit pincode' });
-    return;
-  }
-
-  setIsChecking(true);
-  setStatus(null);
-
-  try {
-    const { data, error } = await supabase
-      .from('serviceable_pincodes')
-      .select('pincode, area, zone_id, status')
-      .eq('pincode', cleanPin)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    if (data && data.status && data.status.toLowerCase().includes('available')) {
-      const areaName = data.area || 'Mumbai';
-      setLocation({
-        area: areaName,
-        pincode: data.pincode,
-        zoneId: data.zone_id,
-      });
-
-      setStatus({ type: 'success', message: `⚡ Delivery available for ${areaName} (${data.pincode})` });
-
-      setTimeout(() => {
-        setIsDropdownOpen(false);
-        setStatus(null);
-        setPincodeInput('');
-      }, 900);
-    } else {
-      setStatus({
-        type: 'error',
-        message: `Delivery currently unavailable for ${cleanPin}`,
-      });
+    if (!cleanPin || cleanPin.length !== 6) {
+      setStatus({ type: 'error', message: 'Enter a valid 6-digit pincode' });
+      return;
     }
-  } catch (err) {
-    console.error('Pincode check error:', err);
-    setStatus({ type: 'error', message: 'Error checking pincode. Try again.' });
-  } finally {
-    setIsChecking(false);
-  }
-};
+
+    setIsChecking(true);
+    setStatus(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('serviceable_pincodes')
+        .select('pincode, area, zone_id, status')
+        .eq('pincode', cleanPin)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data && data.status && data.status.toLowerCase().includes('available')) {
+        const areaName = data.area || 'Mumbai';
+        setLocation({
+          area: areaName,
+          pincode: data.pincode,
+          zoneId: data.zone_id,
+        });
+
+        setStatus({ type: 'success', message: `⚡ Delivery available for ${areaName} (${data.pincode})` });
+
+        setTimeout(() => {
+          setIsDropdownOpen(false);
+          setStatus(null);
+          setPincodeInput('');
+        }, 900);
+      } else {
+        setStatus({
+          type: 'error',
+          message: `Delivery currently unavailable for ${cleanPin}`,
+        });
+      }
+    } catch (err) {
+      console.error('Pincode check error:', err);
+      setStatus({ type: 'error', message: 'Error checking pincode. Try again.' });
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   // Browser GPS detection
   const handleGpsLocation = () => {
@@ -163,6 +170,7 @@ const verifyPincode = async (inputPin) => {
   const navLinks = [
     { label: 'Catches', href: '#all-products', isExternal: false },
     { label: 'Our Story', href: '#story', isExternal: false },
+    { label: 'TRACK ORDER', onClick: handleTrackClick, isButton: true },
     { label: 'Contact for Bulk', href: WHATSAPP_BULK_URL, isExternal: true },
   ];
 
@@ -246,36 +254,35 @@ const verifyPincode = async (inputPin) => {
                   </div>
 
                   {/* Pincode Search Form */}
-                  {/* Pincode Search Form */}
-<form
-  onSubmit={(e) => {
-    e.preventDefault();
-    verifyPincode(pincodeInput);
-  }}
-  className="mt-3 space-y-2"
->
-  <div className="flex items-center gap-2">
-    <div className="relative flex-1">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
-      <input
-        type="text"
-        maxLength={6}
-        value={pincodeInput}
-        onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
-        onInput={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
-        placeholder="Enter 6-digit Pincode"
-        className="w-full pl-8 pr-2 py-2 bg-[#100D2D] border border-white/10 rounded-xl text-xs text-[#FAF7EE] placeholder-white/40 focus:outline-none focus:border-[#D5C582] font-bold tracking-wider"
-      />
-    </div>
-    <button
-      type="submit"
-      disabled={isChecking || pincodeInput.replace(/\D/g, '').length !== 6}
-      className="px-3.5 py-2 rounded-xl bg-[#D5C582] hover:bg-[#c5b572] disabled:opacity-40 text-[#1D184D] font-extrabold text-[11px] uppercase tracking-wider shrink-0 cursor-pointer transition-colors"
-    >
-      {isChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Check'}
-    </button>
-  </div>
-</form>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      verifyPincode(pincodeInput);
+                    }}
+                    className="mt-3 space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={pincodeInput}
+                          onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
+                          onInput={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Enter 6-digit Pincode"
+                          className="w-full pl-8 pr-2 py-2 bg-[#100D2D] border border-white/10 rounded-xl text-xs text-[#FAF7EE] placeholder-white/40 focus:outline-none focus:border-[#D5C582] font-bold tracking-wider"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isChecking || pincodeInput.replace(/\D/g, '').length !== 6}
+                        className="px-3.5 py-2 rounded-xl bg-[#D5C582] hover:bg-[#c5b572] disabled:opacity-40 text-[#1D184D] font-extrabold text-[11px] uppercase tracking-wider shrink-0 cursor-pointer transition-colors"
+                      >
+                        {isChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Check'}
+                      </button>
+                    </div>
+                  </form>
 
                   {/* GPS Location Button */}
                   <button
@@ -312,21 +319,36 @@ const verifyPincode = async (inputPin) => {
 
           {/* Desktop Navigation Links */}
           <div className="relative z-10 hidden md:flex items-center gap-6 lg:gap-8 text-[12px] font-semibold tracking-[0.16em] uppercase">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target={link.isExternal ? '_blank' : undefined}
-                rel={link.isExternal ? 'noopener noreferrer' : undefined}
-                className={`relative py-1 transition-colors duration-200 ${
-                  isScrolled
-                    ? 'text-[#FAF7EE]/70 hover:text-[#D5C582]'
-                    : 'text-[#1D184D]/70 hover:text-[#1D184D]'
-                }`}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.isButton ? (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={link.onClick}
+                  className={`relative py-1 transition-colors duration-200 cursor-pointer ${
+                    isScrolled
+                      ? 'text-[#FAF7EE]/70 hover:text-[#D5C582]'
+                      : 'text-[#1D184D]/70 hover:text-[#1D184D]'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target={link.isExternal ? '_blank' : undefined}
+                  rel={link.isExternal ? 'noopener noreferrer' : undefined}
+                  className={`relative py-1 transition-colors duration-200 ${
+                    isScrolled
+                      ? 'text-[#FAF7EE]/70 hover:text-[#D5C582]'
+                      : 'text-[#1D184D]/70 hover:text-[#1D184D]'
+                  }`}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
           </div>
 
           {/* Cart Trigger & Mobile Menu Toggle */}
@@ -368,18 +390,29 @@ const verifyPincode = async (inputPin) => {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-[#1D184D]/95 backdrop-blur-md flex flex-col justify-center items-center gap-8 text-[#FAF7EE] select-none">
           <nav className="flex flex-col items-center gap-7 text-lg tracking-[0.18em] uppercase font-semibold">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target={link.isExternal ? '_blank' : undefined}
-                rel={link.isExternal ? 'noopener noreferrer' : undefined}
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-[#D5C582] transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.isButton ? (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={link.onClick}
+                  className="hover:text-[#D5C582] transition-colors cursor-pointer"
+                >
+                  {link.label}
+                </button>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target={link.isExternal ? '_blank' : undefined}
+                  rel={link.isExternal ? 'noopener noreferrer' : undefined}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="hover:text-[#D5C582] transition-colors"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
           </nav>
         </div>
       )}

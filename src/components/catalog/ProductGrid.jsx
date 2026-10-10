@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, Search, X, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { getAllProducts } from '../../services/productService';
+import SectionDivider from '../common/SectionDivider';
 
 /**
  * Format database product row into standard payload for Product Details Modal
@@ -228,19 +229,9 @@ export default function ProductGrid({ onSelectProduct }) {
 
   return (
     <section id="all-products" className="relative w-full bg-[#FAF7EE] select-none pb-28">
-      <div className="relative w-full overflow-hidden leading-none">
-        <div className="w-full bg-[#1D184D] border-y border-[#D5C582]/25 py-4 px-6 sm:px-12 shadow-sm">
-          <div className="max-w-[1560px] mx-auto flex flex-wrap items-center justify-between gap-y-2 text-[10px] sm:text-xs font-semibold tracking-[0.28em] uppercase text-[#D5C582] font-['Sora',sans-serif]">
-            <span>Dock-to-Door Mumbai</span>
-            <span className="text-[#D5C582]/40">◆</span>
-            <span>Pure and Fresh</span>
-            <span className="text-[#D5C582]/40">◆</span>
-            <span>Daily Coastal Landing</span>
-          </div>
-        </div>
-      </div>
+      <SectionDivider />
 
-      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-16 mb-8">
+      <div className="max-w-[1560px] mx-auto px-6 sm:px-12 pt-4 mb-8">
         <span className="text-[11px] font-bold tracking-[0.28em] uppercase text-[#C2542D] block mb-2 font-['Sora',sans-serif]">
           Daily Harbor Catch
         </span>
