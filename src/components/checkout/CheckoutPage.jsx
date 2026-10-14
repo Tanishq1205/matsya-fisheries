@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
-import { supabase } from '../../lib/supabaseClient';
+import { getDeliveryQuote } from '../../services/deliveryService';
+import { placeOrder } from '../../services/orderService';
 
 const LOCAL_STORAGE_KEY = 'matsya_customer_details';
 
@@ -37,48 +38,37 @@ export default function CheckoutPage({ onBackToCatalog }) {
   // Dynamic Database Pincode Serviceability State
   const [isServiceable, setIsServiceable] = useState(true);
   const [isCheckingPincode, setIsCheckingPincode] = useState(false);
+  const [deliveryQuote, setDeliveryQuote] = useState(null);
+  const quoteRequest = useRef(0);
 
   // Order Totals
   const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  const deliveryFee = subtotal >= 799 ? 0 : 49;
+  const deliveryFee = deliveryQuote?.pincode === formData.pincode.trim() ? deliveryQuote.fee : null;
   const gstAmount = Math.round(subtotal * 0.05);
-  const totalAmount = subtotal + deliveryFee;
+  const totalAmount = Math.round((subtotal + (deliveryFee ?? 0)) * 100) / 100;
 
   // Real-time Database Check for PIN Code Serviceability
   const verifyPincodeWithSupabase = useCallback(async (pinToTest) => {
+    const request = ++quoteRequest.current;
+    setDeliveryQuote(null);
     const cleanedPin = pinToTest.replace(/\D/g, '').trim();
     if (cleanedPin.length !== 6) {
-      setIsServiceable(true);
+      setIsServiceable(false);
+      setIsCheckingPincode(false);
       return;
     }
 
     setIsCheckingPincode(true);
     try {
-      // Query your database table (checks 'pincodes', 'serviceable_pincodes', or 'locations')
-      const { data, error } = await supabase
-        .from('pincodes')
-        .select('pincode, is_active')
-        .eq('pincode', cleanedPin)
-        .maybeSingle();
-
-      if (error) {
-        // Fallback search if table name differs slightly
-        const { data: altData } = await supabase
-          .from('serviceable_pincodes')
-          .select('pincode')
-          .eq('pincode', cleanedPin)
-          .maybeSingle();
-
-        setIsServiceable(!!altData);
-      } else {
-        // Active in DB = serviceable
-        setIsServiceable(data ? data.is_active !== false : false);
-      }
+      const quote = await getDeliveryQuote(cleanedPin);
+      if (request !== quoteRequest.current) return;
+      setDeliveryQuote(quote);
+      setIsServiceable(!!quote);
     } catch (err) {
       console.error('Error checking pincode in database:', err);
-      setIsServiceable(true); // Don't block user on network error
+      if (request === quoteRequest.current) setIsServiceable(false);
     } finally {
-      setIsCheckingPincode(false);
+      if (request === quoteRequest.current) setIsCheckingPincode(false);
     }
   }, []);
 
@@ -141,7 +131,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    if (name === 'pincode' && value.replace(/\D/g, '').length === 6) {
+    if (name === 'pincode') {
       verifyPincodeWithSupabase(value);
     }
   };
@@ -160,6 +150,13 @@ export default function CheckoutPage({ onBackToCatalog }) {
     return;
   }
 
+  if (isSubmitting || !cart.length) return;
+  if (!/^[6-9]\d{9}$/.test(formData.phone.trim()) || !/^\d{6}$/.test(formData.pincode.trim())) {
+    setErrorMessage('Enter a valid 10-digit mobile number and 6-digit PIN code.');
+    return;
+  }
+  if (isCheckingPincode) { setErrorMessage('Please wait for the delivery area check.'); return; }
+  if (deliveryFee === null) { setErrorMessage('Check your delivery PIN code before ordering.'); return; }
   setIsSubmitting(true);
 
   try {
@@ -185,16 +182,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
     };
 
     // Insert order and select generated order_number and id
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([orderPayload])
-      .select('id, order_number')
-      .single();
-
-    if (error) {
-      console.error('Supabase orders insert error:', error.message);
-      throw error;
-    }
+    const data = await placeOrder(orderPayload);
 
     // Format friendly display order number
     const generatedId = data?.order_number
@@ -220,7 +208,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
 
     setOrderSuccess({
       orderId: generatedId,
-      totalAmount,
+      totalAmount: data.total_amount,
       customerName: fullName,
       deliverySlot,
       fullAddress,
@@ -229,7 +217,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
     if (clearCart) clearCart();
   } catch (err) {
     console.error('Order submission error:', err);
-    setErrorMessage('Failed to place order. Please check your connection and try again.');
+    setErrorMessage(err.message || 'Failed to place order. Please try again.');
   } finally {
     setIsSubmitting(false);
   }
@@ -556,12 +544,12 @@ export default function CheckoutPage({ onBackToCatalog }) {
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span className="font-bold text-[#2B7A4B]">{deliveryFee === 0 ? 'Free shipping' : `₹${deliveryFee}`}</span>
+                    <span className="font-bold text-[#2B7A4B]">{deliveryFee === null ? 'Enter delivery PIN code' : deliveryFee === 0 ? 'Free shipping' : `₹${deliveryFee.toFixed(2)}`}</span>
                   </div>
                   <div className="flex justify-between text-base font-bold text-[#1D184D] pt-3 border-t border-[#1D184D]/10">
                     <span>Total</span>
                     <div className="text-right">
-                      <span className="text-xl text-[#1D184D]">₹{totalAmount}</span>
+                      <span className="text-xl text-[#1D184D]">{deliveryFee === null ? '—' : `₹${totalAmount.toFixed(2)}`}</span>
                       <span className="block text-[10px] text-[#1D184D]/50 font-normal">(includes ₹{gstAmount} GST)</span>
                     </div>
                   </div>
@@ -637,7 +625,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
                 {/* Place Order CTA */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || cart.length === 0 || !isServiceable || isCheckingPincode}
+                  disabled={isSubmitting || cart.length === 0 || !isServiceable || isCheckingPincode || deliveryFee === null}
                   className="w-full py-4 px-6 rounded-full bg-[#1D184D] hover:bg-[#15113A] disabled:opacity-40 text-[#D5C582] font-black text-xs sm:text-sm uppercase tracking-widest shadow-xl transition-all cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
@@ -648,7 +636,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
                   ) : !isServiceable ? (
                     'UNSERVICEABLE LOCATION'
                   ) : (
-                    `PLACE ORDER • ₹${totalAmount}`
+                    deliveryFee === null ? 'ENTER DELIVERY PIN CODE' : `PLACE ORDER • ₹${totalAmount.toFixed(2)}`
                   )}
                 </button>
               </div>

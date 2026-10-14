@@ -13,6 +13,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { ensureCustomerSession } from '../../services/orderService';
 
 const TRACKING_STEPS = [
   {
@@ -77,10 +78,11 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
   setOrders([]);
 
   try {
+    const session = await ensureCustomerSession();
     const cleanInput = query.replace('#MATSYA-', '').trim();
-    const isPhone = /^\d{10}\$/.test(query.replace(/\D/g, ''));
+    const isPhone = /^\d{10}$/.test(query.replace(/\D/g, ''));
 
-    let supabaseQuery = supabase.from('orders').select('*');
+    let supabaseQuery = supabase.from('orders').select('*').eq('customer_id', session.user.id);
 
     if (isPhone) {
       // Query by customer_phone column
@@ -90,7 +92,10 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
       supabaseQuery = supabaseQuery.eq('order_number', parseInt(cleanInput, 10));
     } else {
       // Query by UUID or phone fallback
-      supabaseQuery = supabaseQuery.or(`id.eq.${cleanInput},customer_phone.eq.${cleanInput}`);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanInput)) {
+        setErrorMessage('Enter your order number or phone number.'); return;
+      }
+      supabaseQuery = supabaseQuery.eq('id', cleanInput);
     }
 
     const { data, error } = await supabaseQuery.order('created_at', { ascending: false });
@@ -149,6 +154,7 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
           </span>
         </div>
 
+        <p className="text-sm text-center mb-4">Track orders placed in this browser. For older orders or another device, contact us on WhatsApp.</p>
         {/* Search Header */}
         <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#1D184D]/10 shadow-sm space-y-4 text-center max-w-2xl mx-auto mb-10">
           <div className="w-12 h-12 bg-[#1D184D]/5 rounded-full flex items-center justify-center mx-auto text-[#1D184D]">

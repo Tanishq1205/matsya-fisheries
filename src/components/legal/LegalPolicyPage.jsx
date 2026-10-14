@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { business } from '../../config/business';
 import { ArrowLeft, ShieldCheck, FileText, RefreshCw, Truck } from 'lucide-react';
 
 export default function LegalPolicyPage({ policyType = 'privacy', onBackToCatalog }) {
@@ -80,6 +81,14 @@ export default function LegalPolicyPage({ policyType = 'privacy', onBackToCatalo
           <strong>Disclaimer:</strong> Matsya Fisheries reserves the right to amend this regulatory policy periodically to comply with updated food safety guidelines, municipal dock regulations, or platform operational procedures. Please review this document regularly.
         </div>
 
+        <section className="mb-8 text-sm space-y-2" aria-label="Business contact">
+          <h2 className="font-bold">Business contact and grievances</h2>
+          {business.email && <p>Email: <a href={'mailto:' + business.email}>{business.email}</a></p>}
+          {business.address && <p>Business address: {business.address}</p>}
+          {business.grievanceOfficer && <p>Grievance officer: {business.grievanceOfficer}</p>}
+          {business.grievanceEmail && <p>Grievances: <a href={'mailto:' + business.grievanceEmail}>{business.grievanceEmail}</a></p>}
+          <p>Order support: <a href="https://wa.me/919372379317">WhatsApp +91 93723 79317</a></p>
+        </section>
         {/* --- POLICY CONTENT CLAUSES --- */}
         <div className="space-y-8 text-sm text-gray-800 leading-relaxed font-normal">
 
@@ -108,7 +117,7 @@ export default function LegalPolicyPage({ policyType = 'privacy', onBackToCatalo
                   B. How do we use and safeguard your data?
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-700">
-                  All customer data is encrypted in transit and stored within Supabase cloud storage enforcing strict Row Level Security (RLS) policies. Contact details are used exclusively for delivery routing, order tracking, and receipt notifications. We strictly never sell, trade, or expose customer contact history to external market agencies.
+                  Order details are stored in Supabase to process deliveries and provide order support. This browser stores your cart, delivery preferences and saved checkout details; you can remove them by clearing site data. Contact details are used exclusively for delivery routing, order tracking, and receipt notifications. We strictly never sell, trade, or expose customer contact history to external market agencies.
                 </p>
               </section>
             </>

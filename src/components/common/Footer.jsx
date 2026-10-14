@@ -1,4 +1,5 @@
 import React from 'react';
+import { business } from '../../config/business';
 import {
   MapPin,
   Phone,
@@ -203,6 +204,11 @@ export default function Footer({
             Contact & Operations
           </h4>
           <div className="space-y-2 text-xs text-white/70">
+            <p><a href={'mailto:' + business.email} className="hover:text-white break-all">{business.email}</a></p>
+            <p className="flex items-start gap-2">
+              <MapPin className="w-3.5 h-3.5 text-[#D5C582] shrink-0 mt-0.5" />
+              <span>{business.address}</span>
+            </p>
             <p className="flex items-center gap-2">
               <Phone className="w-3.5 h-3.5 text-[#D5C582]" />
               <span>+91 93723 79317</span>

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useToastStore } from './useToastStore';
+import { clearCheckoutRequests } from '../services/checkoutRequest';
 
 export const useCartStore = create(
   persist(
@@ -21,6 +22,11 @@ export const useCartStore = create(
 
       addItem: (product, weight = '1kg', cut = 'Cleaned & RO Washed') => {
         if (!product) return;
+        if (!get().cart.length) {
+          // A new basket after a completed/cleared basket is a new purchase.
+          // Keep keys through success so queued duplicate submissions still deduplicate.
+          clearCheckoutRequests();
+        }
 
         const normWeight = (weight || '1kg').toString().toLowerCase();
         const is500g = normWeight.includes('500');
@@ -48,7 +54,9 @@ export const useCartStore = create(
           );
         }
 
-        const cartItemId = `${product.id}-${is500g ? '500g' : '1000g'}`;
+        const productId = product.productId || product.id;
+        const selectedCut = product.cut || product.standard_cut || cut;
+        const cartItemId = `${productId}-${is500g ? '500g' : '1000g'}-${selectedCut}`;
 
         set((state) => {
           const currentCart = Array.isArray(state.cart) ? state.cart : [];
@@ -68,12 +76,13 @@ export const useCartStore = create(
 
           const newItem = {
             cartItemId,
-            id: product.id,
+            id: productId,
+            productId,
             name: product.name,
             marathiName: product.marathiName || '',
             image: product.image || '/images/placeholder-fish.jpg',
             weight: is500g ? '500g' : '1000g',
-            cut: product.standard_cut || cut,
+            cut: selectedCut,
             price: price || 0,
             quantity: 1,
           };

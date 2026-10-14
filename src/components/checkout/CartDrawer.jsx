@@ -26,12 +26,6 @@ export default function CartDrawer({ onOpenCheckout }) {
   const totalItemCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
-  // Dynamic Free Delivery threshold logic
-  const FREE_DELIVERY_THRESHOLD = 799;
-  const isFreeDelivery = subtotal >= FREE_DELIVERY_THRESHOLD;
-  const amountNeeded = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
-  const progressPercentage = subtotal === 0 ? 0 : Math.min(100, (subtotal / FREE_DELIVERY_THRESHOLD) * 100);
-
   const handleProceedToCheckout = () => {
     closeCart();
     if (onOpenCheckout) {
@@ -80,33 +74,7 @@ export default function CartDrawer({ onOpenCheckout }) {
             </div>
           </div>
 
-          {/* DYNAMIC FREE EXPRESS DELIVERY BANNER */}
-          <div className="px-5 pt-4 pb-2 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <div className="flex items-center gap-2 text-[#D5C582]">
-                <Sparkles className="w-4 h-4 text-[#D5C582]" />
-                {subtotal === 0 ? (
-                  <span className="text-white/70">Add items worth ₹{FREE_DELIVERY_THRESHOLD} for Free Express Delivery</span>
-                ) : isFreeDelivery ? (
-                  <span className="text-[#6EE7A8]">🎉 Free Express Delivery Unlocked!</span>
-                ) : (
-                  <span className="text-[#FAF7EE]">
-                    Add <strong className="text-[#D5C582]">₹{amountNeeded}</strong> more for Free Delivery
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* DYNAMIC PROGRESS BAR */}
-            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#C2542D] to-[#D5C582] transition-all duration-300 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </div>
-
-          {/* SCROLLABLE BODY */}
+<p className="px-5 pt-4 text-xs text-white/70">Delivery charges are calculated at checkout using your delivery PIN code.</p>
           <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
             
             {/* PREFERRED CATCH WINDOW SELECTOR CARD */}

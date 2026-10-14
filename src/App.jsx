@@ -18,6 +18,10 @@ import Footer from './components/common/Footer';
 import { useCartStore } from './store/useCartStore';
 import AdminDashboard from './components/admin/AdminDashboard';
 import LegalPolicyPage from './components/legal/LegalPolicyPage';
+import PageMetadata from './components/common/PageMetadata';
+import CaptchaDialog from './components/common/CaptchaDialog';
+import { getProductById } from './services/productService';
+import { formatForDetailsPage } from './components/catalog/ProductGrid';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +35,7 @@ export default function App() {
   const closeCheckout = useCartStore((state) => state.closeCheckout);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [category, setCategory] = useState(new URLSearchParams(window.location.search).get('category') || 'ALL');
   const lenisRef = useRef(null);
 
   const savedScrollRef = useRef(0);
@@ -58,20 +63,23 @@ export default function App() {
     }
   };
 
-  // Reset to Home Catalog & clear URL hashes whenever the page reloads or mounts freshly
+  // Preserve customer links, but always leave the admin view on reload.
   useEffect(() => {
-    if (window.location.hash || window.history.state) {
-      window.history.replaceState(
-        null,
-        '',
-        window.location.pathname + window.location.search
-      );
-    }
     closeCheckout();
+    const hash = window.location.hash;
     setIsAdminOpen(false);
-    setIsTrackOpen(false);
-    setLegalPolicy(null);
-    setSelectedProduct(null);
+    if (hash === '#admin') {
+      window.history.replaceState(null, '', window.location.pathname);
+      setSelectedProduct(null);
+      setCategory('ALL');
+      setIsTrackOpen(false);
+      setLegalPolicy(null);
+      return;
+    }
+    setIsTrackOpen(hash === '#track');
+    if (['#privacy-policy', '#terms', '#refund-policy', '#shipping-policy'].includes(hash)) setLegalPolicy(hash.slice(1));
+    const id = new URLSearchParams(window.location.search).get('product');
+    if (id) getProductById(id).then(({ data }) => { if (data) setSelectedProduct(formatForDetailsPage(data)); });
   }, [closeCheckout]);
 
   // Active Session Hash Listener (#admin, #track, #privacy-policy, etc.) & Shortcut Key (Ctrl+Shift+A)
@@ -200,7 +208,10 @@ export default function App() {
         }
       }
 
-      setSelectedProduct(state?.product ?? null);
+      setCategory(new URLSearchParams(window.location.search).get('category') || 'ALL');
+      const id = new URLSearchParams(window.location.search).get('product');
+      if (id && !state?.product) getProductById(id).then(({ data }) => setSelectedProduct(data ? formatForDetailsPage(data) : null));
+      else setSelectedProduct(state?.product ?? null);
     };
 
     window.addEventListener('popstate', onPopState);
@@ -264,10 +275,14 @@ export default function App() {
   };
 
   const handleSelectProduct = (productData) => {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    url.searchParams.delete('category');
+    url.searchParams.set('product', productData.id);
     if (!selectedProduct) {
       const currentY = lenisRef.current?.scroll ?? window.scrollY ?? 0;
       savedScrollRef.current = currentY;
-      window.history.pushState({ view: 'product', product: productData }, '');
+      window.history.pushState({ view: 'product', product: productData }, '', url);
     } else {
       window.history.replaceState({ view: 'product', product: productData }, '');
     }
@@ -276,8 +291,11 @@ export default function App() {
 
   const closeProduct = () => {
     setSelectedProduct(null);
-    if (window.history.state?.view === 'product') {
-      window.history.replaceState(null, '');
+    if (window.history.state?.view === 'product' || new URLSearchParams(window.location.search).has('product')) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('product');
+      if (category !== 'ALL') url.searchParams.set('category', category);
+      window.history.replaceState(null, '', url);
     }
   };
 
@@ -316,6 +334,7 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-[#FAF7EE] text-[#1D184D]">
+      <PageMetadata product={selectedProduct} category={category} policy={legalPolicy} privatePage={isAdminOpen ? 'Admin' : isTrackOpen ? 'Order tracking' : isCheckoutOpen ? 'Checkout' : null} />
       {isLoading && <LogoPreloader onComplete={handlePreloaderComplete} />}
 
       <Navbar onLogoClick={handleLogoClick} onOpenTrack={handleOpenTrackPage} />
@@ -342,7 +361,12 @@ export default function App() {
             <div className={selectedProduct ? 'hidden' : 'w-full flex flex-col'}>
               <Hero isPreloaderFinished={!isLoading} />
               <FeaturedSpotlights onSelectProduct={handleSelectProduct} />
-              <ProductGrid onSelectProduct={handleSelectProduct} />
+              <ProductGrid onSelectProduct={handleSelectProduct} category={category} onCategoryChange={(value) => {
+                setCategory(value);
+                const url = new URL(window.location.href);
+                if (value === 'ALL') url.searchParams.delete('category'); else url.searchParams.set('category', value);
+                window.history.pushState(null, '', url);
+              }} />
               <WhyMatsya />
               <TeamStorySection />
             </div>
@@ -363,6 +387,7 @@ export default function App() {
       <Footer onLogoClick={handleLogoClick} onOpenTrack={handleOpenTrackPage} />
       <CartDrawer />
       <Toast />
+      <CaptchaDialog />
     </div>
   );
 }

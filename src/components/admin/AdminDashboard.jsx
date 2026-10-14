@@ -19,8 +19,9 @@ import {
   DollarSign,
   Loader2,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase as supabase } from '../../lib/supabaseClient';
 import { getWhatsAppReceiptLink } from '../../lib/whatsapp';
+import { requestCaptchaToken } from '../../services/captcha';
 
 
 
@@ -33,9 +34,15 @@ const STATUS_OPTIONS = [
   { key: 'delivered', label: 'Delivered' },
 ];
 
+const formatOrderAmount = (value) => value == null ? '—' : new Intl.NumberFormat('en-IN', {
+  style: 'currency', currency: 'INR', minimumFractionDigits: 2,
+}).format(Number(value));
+
 export default function AdminDashboard({ onBackToCatalog }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [pinError, setPinError] = useState('');
 
   const [orders, setOrders] = useState([]);
@@ -48,7 +55,7 @@ export default function AdminDashboard({ onBackToCatalog }) {
   // and lock again whenever the dashboard is left (component unmounts).
   useEffect(() => {
     sessionStorage.removeItem('matsya_admin_auth');
-    return () => sessionStorage.removeItem('matsya_admin_auth');
+    return () => { void supabase.auth.signOut(); };
   }, []);
 
 
@@ -56,31 +63,33 @@ const handlePinSubmit = async (e) => {
   e.preventDefault();
   setPinError('');
 
-  if (!pinInput.trim()) {
-    setPinError('Please enter a passkey.');
+  if (isSigningIn) return;
+  if (!email.trim() || !pinInput) {
+    setPinError('Please enter your staff email and password.');
     return;
   }
 
+  setIsSigningIn(true);
   try {
-    // Calls the secure Supabase function on the server
-    const { data: isValid, error } = await supabase.rpc('verify_admin_pin', {
-      input_pin: pinInput.trim(),
-    });
+    // RLS verifies the signed staff session independently of this form.
+    const captchaToken = await requestCaptchaToken();
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pinInput, options: { captchaToken } });
 
     if (error) throw error;
 
-    if (isValid) {
+    if (data.user?.app_metadata?.role === 'admin') {
       setIsAuthenticated(true);
       setPinError('');
       fetchOrders();
     } else {
-      setPinError('Invalid Dock Passkey. Access Denied.');
+      await supabase.auth.signOut();
+      setPinError('This account does not have staff access.');
       setPinInput('');
     }
   } catch (err) {
     console.error('Error verifying passkey:', err.message);
-    setPinError('Error connecting to database. Try again.');
-  }
+    setPinError(err.message || 'Sign-in failed. Check your email and password.');
+  } finally { setIsSigningIn(false); }
 };
 
   const fetchOrders = async () => {
@@ -157,16 +166,19 @@ const handlePinSubmit = async (e) => {
           <div>
             <h1 className="text-2xl font-black text-[#1D184D]">Dock Admin Access</h1>
             <p className="text-xs text-[#1D184D]/60 mt-1">
-              Enter the Matsya Fisheries dock passkey to manage orders
+              Sign in with your staff email and password
             </p>
           </div>
 
           <form onSubmit={handlePinSubmit} className="space-y-4">
+  <input type="email" required autoComplete="username" aria-label="Staff email" placeholder="Staff email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-full border p-3 text-sm" />
   <input
     type="password"
-    maxLength={6}
+    required
+    autoComplete="current-password"
+    aria-label="Password"
     value={pinInput}
-    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+    onChange={(e) => setPinInput(e.target.value)}
     placeholder=""
     className="w-full text-center text-sm font-bold py-3.5 bg-[#FAF7EE] border border-[#1D184D]/20 rounded-full text-[#1D184D] focus:outline-none focus:border-[#1D184D] tracking-[0.4em] placeholder:tracking-normal placeholder:text-xs placeholder:font-semibold placeholder:text-[#1D184D]/40"
   />
@@ -175,9 +187,10 @@ const handlePinSubmit = async (e) => {
 
   <button
     type="submit"
+    disabled={isSigningIn}
     className="w-full py-4 rounded-full bg-[#1D184D] hover:bg-[#15113A] text-[#D5C582] font-bold text-xs uppercase tracking-wider cursor-pointer transition-all shadow-md"
   >
-    UNLOCK DASHBOARD
+    {isSigningIn ? 'SIGNING IN...' : 'SIGN IN'}
   </button>
 </form>
 
@@ -226,6 +239,8 @@ const handlePinSubmit = async (e) => {
               type="button"
               onClick={() => {
                 sessionStorage.removeItem('matsya_admin_auth');
+                void supabase.auth.signOut();
+                setOrders([]);
                 setIsAuthenticated(false);
               }}
               className="px-4 py-2 rounded-full bg-[#1D184D]/5 text-xs font-bold text-[#1D184D]/70 hover:text-[#1D184D]"
@@ -354,7 +369,7 @@ const handlePinSubmit = async (e) => {
                         <MessageCircle className="w-3.5 h-3.5 fill-current" /> Send Dispatch Receipt
                         </a>
 
-                      <span className="text-lg font-black text-[#1D184D]">₹{order.total_amount}</span>
+                      <span className="text-lg font-black text-[#1D184D]">{formatOrderAmount(order.total_amount)}</span>
                     </div>
                   </div>
 
@@ -391,6 +406,21 @@ const handlePinSubmit = async (e) => {
                       ))}
                     </div>
                   </div>
+
+                  <dl aria-label="Order price breakdown" className="w-full sm:max-w-xs sm:ml-auto space-y-2 border-t border-[#1D184D]/10 pt-3 text-xs">
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-[#1D184D]/70">Subtotal</dt>
+                      <dd className="font-semibold">{formatOrderAmount(order.subtotal)}</dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-[#1D184D]/70">Delivery fee</dt>
+                      <dd className="font-semibold">{formatOrderAmount(order.delivery_fee)}</dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 border-t border-[#1D184D]/10 pt-2 font-bold">
+                      <dt>Total</dt>
+                      <dd>{formatOrderAmount(order.total_amount)}</dd>
+                    </div>
+                  </dl>
 
                   {/* Quick Action Status Toggles */}
                   <div className="pt-2 border-t border-[#1D184D]/10 flex flex-wrap items-center justify-between gap-3">

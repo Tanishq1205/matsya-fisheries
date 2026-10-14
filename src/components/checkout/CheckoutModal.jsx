@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, MapPin, Phone, User, Home, Sparkles, Loader2, CreditCard } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
-import { supabase } from '../../lib/supabaseClient';
+import { placeOrder } from '../../services/orderService';
+import { getDeliveryQuote } from '../../services/deliveryService';
 
 const LOCAL_STORAGE_KEY = 'matsya_customer_details';
 
@@ -29,8 +30,18 @@ export default function CheckoutModal() {
 
   // Calculated Order Totals
   const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  const deliveryFee = subtotal >= 799 ? 0 : 49;
-  const totalAmount = subtotal + deliveryFee;
+  const [quote, setQuote] = useState(null);
+  const deliveryFee = quote?.pincode === formData.pincode.trim() ? quote.fee : null;
+  const totalAmount = Math.round((subtotal + (deliveryFee ?? 0)) * 100) / 100;
+  useEffect(() => {
+    let cancelled = false;
+    setQuote(null);
+    if (/^\d{6}$/.test(formData.pincode.trim())) {
+      getDeliveryQuote(formData.pincode.trim()).then(value => { if (!cancelled) setQuote(value); })
+        .catch(() => { if (!cancelled) setQuote(null); });
+    }
+    return () => { cancelled = true; };
+  }, [formData.pincode]);
 
   // Option 1: Pre-fill customer address from localStorage on modal open
   useEffect(() => {
@@ -63,6 +74,8 @@ export default function CheckoutModal() {
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
+    if (isSubmitting || !cart.length) return;
+    if (deliveryFee === null) { setErrorMessage('Enter a serviceable PIN code and wait for delivery charges.'); return; }
     setErrorMessage('');
 
     if (!formData.fullName.trim() || !formData.phone.trim() || !formData.address.trim() || !formData.pincode.trim()) {
@@ -81,8 +94,8 @@ export default function CheckoutModal() {
       // 1. Build Order Payload
       const orderPayload = {
         customer_name: formData.fullName.trim(),
-        phone: formData.phone.trim(),
-        address: formData.address.trim(),
+        customer_phone: formData.phone.trim(),
+        delivery_address: formData.address.trim(),
         landmark: formData.landmark.trim() || null,
         pincode: formData.pincode.trim(),
         items: cart,
@@ -91,22 +104,14 @@ export default function CheckoutModal() {
         total_amount: totalAmount,
         delivery_slot: deliverySlot,
         payment_method: formData.paymentMethod,
-        status: 'placed',
+        order_status: 'placed',
+        payment_status: 'pending',
         created_at: new Date().toISOString(),
       };
 
       // 2. Insert order into Supabase
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([orderPayload])
-        .select('id')
-        .single();
-
-      if (error) {
-        console.warn('Note on orders table insertion:', error.message);
-      }
-
-      const generatedId = data?.id ? `#MATSYA-${data.id.toString().slice(0, 8).toUpperCase()}` : `#MATSYA-${Math.floor(100000 + Math.random() * 900000)}`;
+      const data = await placeOrder(orderPayload);
+      const generatedId = data.order_number ? `#MATSYA-${data.order_number}` : `#MATSYA-${data.id}`;
 
       // 3. Save customer details to browser's localStorage for instant 1-click checkout next time
       localStorage.setItem(
@@ -123,7 +128,7 @@ export default function CheckoutModal() {
       // 4. Trigger Confirmation State
       setOrderSuccess({
         orderId: generatedId,
-        totalAmount,
+        totalAmount: data.total_amount,
         customerName: formData.fullName,
         deliverySlot,
       });
@@ -377,18 +382,18 @@ export default function CheckoutModal() {
               </div>
               <div className="flex justify-between text-[#FAF7EE]/70">
                 <span>Delivery Fee:</span>
-                <span>{deliveryFee === 0 ? <strong className="text-[#6EE7A8]">FREE</strong> : `₹${deliveryFee}`}</span>
+                <span>{deliveryFee === null ? 'Enter delivery PIN code' : deliveryFee === 0 ? <strong className="text-[#6EE7A8]">FREE</strong> : `₹${deliveryFee.toFixed(2)}`}</span>
               </div>
               <div className="flex justify-between text-[#FAF7EE] font-bold text-sm pt-2 border-t border-white/10">
                 <span>Total Amount Payable:</span>
-                <span className="text-[#D5C582] text-base">₹{totalAmount}</span>
+                <span className="text-[#D5C582] text-base">{deliveryFee === null ? '—' : `₹${totalAmount.toFixed(2)}`}</span>
               </div>
             </div>
 
             {/* Submit Order CTA */}
             <button
               type="submit"
-              disabled={isSubmitting || cart.length === 0}
+              disabled={isSubmitting || cart.length === 0 || deliveryFee === null}
               className="w-full py-4 rounded-2xl bg-[#D5C582] hover:bg-[#c5b572] disabled:opacity-40 text-[#1D184D] font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xl active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {isSubmitting ? (

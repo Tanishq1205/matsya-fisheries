@@ -182,12 +182,13 @@ function ProductCard({ product, onSelectProduct }) {
   );
 }
 
-export default function ProductGrid({ onSelectProduct }) {
+export default function ProductGrid({ onSelectProduct, category = 'ALL', onCategoryChange }) {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const selectedCategory = category;
+  const setSelectedCategory = (value) => onCategoryChange?.(value);
 
   const categories = [
     { key: 'ALL', label: 'All Catches' },

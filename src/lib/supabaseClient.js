@@ -8,3 +8,7 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Keep the staff session separate from the guest customer session.
+export const adminSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { storageKey: 'matsya_staff_session', storage: window.sessionStorage, persistSession: true },
+});
