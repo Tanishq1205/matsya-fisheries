@@ -20,6 +20,8 @@ do $$ begin
   if (select count(*) from public.orders) <> 1 then raise exception 'Owner cannot read their order'; end if;
   update public.orders set order_status = 'delivered';
   if found then raise exception 'Customer changed order status'; end if;
+  update public.orders set payment_status = 'paid';
+  if found then raise exception 'Customer confirmed their own payment'; end if;
 end $$;
 set local request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated","is_anonymous":true,"user_metadata":{"role":"admin"}}';
 do $$ begin
@@ -38,6 +40,8 @@ do $$ begin
   if not exists(select 1 from public.orders where customer_id = '11111111-1111-4111-8111-111111111111') then raise exception 'Admin cannot read orders'; end if;
   update public.orders set order_status = 'dock_processing' where customer_id = '11111111-1111-4111-8111-111111111111';
   if not found then raise exception 'Admin cannot update status'; end if;
+  update public.orders set payment_status = 'paid' where customer_id = '11111111-1111-4111-8111-111111111111';
+  if not found then raise exception 'Admin cannot confirm payment'; end if;
 end $$;
 set local role anon;
 set local request.jwt.claims = '{"role":"anon"}';

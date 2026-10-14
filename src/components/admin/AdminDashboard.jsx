@@ -132,6 +132,20 @@ const handlePinSubmit = async (e) => {
   };
 
   // Filtered orders calculation
+  const handleCollectPayment = async (order) => {
+    if (!window.confirm(`Confirm you received ${formatOrderAmount(order.total_amount)} for this order${order.payment_method === 'UPI' ? ' and verified the UPI receipt' : ' in cash'}?`)) return;
+    setUpdatingOrderId(order.id);
+    try {
+      const { data, error } = await supabase.from('orders')
+        .update({ payment_status: 'paid' }).eq('id', order.id)
+        .select('id, payment_status').single();
+      if (error) throw error;
+      setOrders(previous => previous.map(item => item.id === data.id ? { ...item, payment_status: data.payment_status } : item));
+    } catch (err) {
+      alert(`Could not record payment: ${err.message}`);
+    } finally { setUpdatingOrderId(null); }
+  };
+
   const filteredOrders = orders.filter((order) => {
     const currentStatus = (order.order_status || 'placed').toLowerCase();
     const matchesStatus = statusFilter === 'all' || currentStatus === statusFilter;
@@ -387,6 +401,13 @@ const handlePinSubmit = async (e) => {
                       <span className="font-bold text-[#1D184D] block mb-1">Fulfillment Details</span>
                       <p className="text-[#1D184D]/80 font-semibold">Slot: {order.delivery_slot || 'Morning Catch'}</p>
                       <p className="text-[#1D184D]/80 font-semibold mt-0.5">Payment: {order.payment_method === 'UPI' ? 'Pay via UPI' : 'Cash on Delivery'} ({order.payment_status || 'pending'})</p>
+                      {String(order.payment_status || 'pending').toLowerCase() === 'pending' && (
+                        <button type="button" disabled={updatingOrderId === order.id}
+                          onClick={() => handleCollectPayment(order)}
+                          className="mt-2 rounded-lg px-3 py-2 bg-[#2B7A4B]/10 text-[#2B7A4B] font-bold disabled:opacity-40">
+                          Mark payment collected
+                        </button>
+                      )}
                     </div>
                   </div>
 

@@ -23,6 +23,7 @@ Security implementation reference: [Supabase Row Level Security documentation](h
 
 - Open `#admin` or press Ctrl+Shift+A. Sign in with the staff email/password. Refresh to fetch orders. Filter by status and search by customer, phone or order number.
 - Move orders through Placed → Processing → In Transit → Delivered. Confirm customer details and fulfilment before each update. The dashboard only changes order status; it does not confirm UPI receipts automatically.
+- Apply `supabase/migrations/202610150004_staff_payment_confirmation.sql` to allow staff to record payments. Once you have received cash or verified the UPI receipt, click **Mark payment collected** and confirm the amount. Delivery status does not automatically mark an order paid. Existing pending payments remain pending until confirmed. Rerun the updated privacy SQL tests after this migration; they check that customers cannot confirm payments while staff can.
 - Use the WhatsApp receipt/update button when communicating with the customer. Lock the dashboard when finished. Leaving it signs out the separate staff session.
 - Manage prices, active products and delivery PIN codes in the corresponding Supabase tables. Restrict database dashboard access to trusted staff.
 - Guest tracking only shows orders placed in that browser session. Clearing site data or using another device loses guest access. For those cases, verify the customer's identity through support. Existing orders are staff-only; do not claim them based only on a phone number.
