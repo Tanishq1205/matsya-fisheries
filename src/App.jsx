@@ -3,7 +3,7 @@ import Lenis from 'lenis';
 
 import LogoPreloader from './components/common/LogoPreloader';
 import Navbar from './components/common/Navbar';
-import Hero from './components/home/HeroBanner';
+import Hero from './components/home/HeroCarousel';
 import FeaturedSpotlights from './components/home/FeaturedSpotlights';
 import ProductGrid from './components/catalog/ProductGrid';
 import WhyMatsya from './components/home/WhyMatsya';
@@ -16,35 +16,113 @@ import Toast from './components/common/Toast';
 import LocationModal from './components/common/LocationModal';
 import Footer from './components/common/Footer';
 import { useCartStore } from './store/useCartStore';
+import AdminDashboard from './components/admin/AdminDashboard';
+import LegalPolicyPage from './components/legal/LegalPolicyPage';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
+
+  // Default strictly to Home Catalog view on initial load / reload
   const [isTrackOpen, setIsTrackOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [legalPolicy, setLegalPolicy] = useState(null);
+
   const isCheckoutOpen = useCartStore((state) => state.isCheckoutOpen);
   const closeCheckout = useCartStore((state) => state.closeCheckout);
-  
-  // Always start at home catalog on page refresh
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const lenisRef = useRef(null);
 
-  // Remembers scroll position on home catalog
   const savedScrollRef = useRef(0);
   const returnToTopRef = useRef(false);
   const prevCheckoutOpenRef = useRef(isCheckoutOpen);
 
-  // Clear lingering history state & ensure checkout/track are closed on initial page refresh
+  const handleOpenAdmin = () => {
+    setIsAdminOpen(true);
+    setIsTrackOpen(false);
+    setLegalPolicy(null);
+    closeCheckout();
+    if (window.location.hash !== '#admin') {
+      window.location.hash = 'admin';
+    }
+  };
+
+  const handleCloseAdmin = () => {
+    setIsAdminOpen(false);
+    if (window.location.hash === '#admin') {
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search
+      );
+    }
+  };
+
+  // Reset to Home Catalog & clear URL hashes whenever the page reloads or mounts freshly
   useEffect(() => {
-    if (window.history.state?.view) {
-      window.history.replaceState(null, '');
+    if (window.location.hash || window.history.state) {
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search
+      );
     }
     closeCheckout();
+    setIsAdminOpen(false);
     setIsTrackOpen(false);
+    setLegalPolicy(null);
+    setSelectedProduct(null);
   }, [closeCheckout]);
+
+  // Active Session Hash Listener (#admin, #track, #privacy-policy, etc.) & Shortcut Key (Ctrl+Shift+A)
+  useEffect(() => {
+    const syncHashState = () => {
+      const hash = window.location.hash;
+      if (hash === '#admin') {
+        setIsAdminOpen(true);
+        setIsTrackOpen(false);
+        setLegalPolicy(null);
+        closeCheckout();
+      } else if (hash === '#track') {
+        setIsTrackOpen(true);
+        setIsAdminOpen(false);
+        setLegalPolicy(null);
+        closeCheckout();
+      } else if (['#privacy-policy', '#terms', '#refund-policy', '#shipping-policy'].includes(hash)) {
+        setLegalPolicy(hash.replace('#', ''));
+        setIsAdminOpen(false);
+        setIsTrackOpen(false);
+        closeCheckout();
+      } else if (!hash) {
+        setIsAdminOpen(false);
+        setIsTrackOpen(false);
+        setLegalPolicy(null);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        if (window.location.hash === '#admin' || isAdminOpen) {
+          handleCloseAdmin();
+        } else {
+          handleOpenAdmin();
+        }
+      }
+    };
+
+    window.addEventListener('hashchange', syncHashState);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('hashchange', syncHashState);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closeCheckout, isAdminOpen]);
 
   // Sync Checkout view with Browser History API
   useEffect(() => {
     if (isCheckoutOpen && !prevCheckoutOpenRef.current) {
-      // Checkout opened -> push history entry so Chrome Back button works
       if (window.history.state?.view !== 'checkout') {
         window.history.pushState(
           { view: 'checkout', product: selectedProduct },
@@ -55,6 +133,7 @@ export default function App() {
     prevCheckoutOpenRef.current = isCheckoutOpen;
   }, [isCheckoutOpen, selectedProduct]);
 
+  // Smooth scrolling (Lenis) setup
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -87,20 +166,41 @@ export default function App() {
     const onPopState = (e) => {
       const state = e.state;
 
-      // Close or open checkout/track based on browser history state
       if (state?.view === 'checkout') {
         useCartStore.getState().openCheckout();
         setIsTrackOpen(false);
-      } else if (state?.view === 'track') {
+        setIsAdminOpen(false);
+        setLegalPolicy(null);
+      } else if (state?.view === 'track' || window.location.hash === '#track') {
         setIsTrackOpen(true);
+        setIsAdminOpen(false);
+        setLegalPolicy(null);
+        useCartStore.getState().closeCheckout();
+      } else if (state?.view === 'admin' || window.location.hash === '#admin') {
+        setIsAdminOpen(true);
+        setIsTrackOpen(false);
+        setLegalPolicy(null);
+        useCartStore.getState().closeCheckout();
+      } else if (['#privacy-policy', '#terms', '#refund-policy', '#shipping-policy'].includes(window.location.hash)) {
+        setLegalPolicy(window.location.hash.replace('#', ''));
+        setIsAdminOpen(false);
+        setIsTrackOpen(false);
         useCartStore.getState().closeCheckout();
       } else {
         useCartStore.getState().closeCheckout();
-        setIsTrackOpen(false);
+        if (window.location.hash) {
+          window.history.replaceState(
+            null,
+            '',
+            window.location.pathname + window.location.search
+          );
+          setIsAdminOpen(false);
+          setIsTrackOpen(false);
+          setLegalPolicy(null);
+        }
       }
 
-      const product = state?.product ?? null;
-      setSelectedProduct(product);
+      setSelectedProduct(state?.product ?? null);
     };
 
     window.addEventListener('popstate', onPopState);
@@ -111,8 +211,7 @@ export default function App() {
   useEffect(() => {
     const lenis = lenisRef.current;
 
-    if (isCheckoutOpen || isTrackOpen || selectedProduct) {
-      // Reset scroll position to top for Product Details, Checkout, or Track Order
+    if (isCheckoutOpen || isTrackOpen || isAdminOpen || legalPolicy || selectedProduct) {
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
@@ -124,7 +223,6 @@ export default function App() {
         lenis.resize();
       }
     } else {
-      // Returning to Home: restore exact saved scroll position
       const targetScroll = returnToTopRef.current ? 0 : savedScrollRef.current;
       returnToTopRef.current = false;
 
@@ -139,7 +237,7 @@ export default function App() {
 
       return () => clearTimeout(timer);
     }
-  }, [selectedProduct, isCheckoutOpen, isTrackOpen]);
+  }, [selectedProduct, isCheckoutOpen, isTrackOpen, isAdminOpen, legalPolicy]);
 
   const handlePreloaderComplete = () => {
     setIsLoading(false);
@@ -150,21 +248,23 @@ export default function App() {
 
   const handleOpenTrackPage = () => {
     if (!isTrackOpen) {
-      window.history.pushState({ view: 'track' }, '');
-      setIsTrackOpen(true);
+      window.location.hash = 'track';
     }
   };
 
   const handleCloseTrackPage = () => {
     setIsTrackOpen(false);
-    if (window.history.state?.view === 'track') {
-      window.history.replaceState(null, '');
+    if (window.location.hash === '#track') {
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search
+      );
     }
   };
 
   const handleSelectProduct = (productData) => {
     if (!selectedProduct) {
-      // Record exact scroll Y position before leaving home
       const currentY = lenisRef.current?.scroll ?? window.scrollY ?? 0;
       savedScrollRef.current = currentY;
       window.history.pushState({ view: 'product', product: productData }, '');
@@ -190,7 +290,16 @@ export default function App() {
       closeCheckout();
     }
     if (isTrackOpen) {
-      setIsTrackOpen(false);
+      handleCloseTrackPage();
+    }
+    if (isAdminOpen) {
+      handleCloseAdmin();
+    }
+    if (legalPolicy) {
+      setLegalPolicy(null);
+      if (['#privacy-policy', '#terms', '#refund-policy', '#shipping-policy'].includes(window.location.hash)) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
     }
     if (selectedProduct) {
       returnToTopRef.current = true;
@@ -213,8 +322,18 @@ export default function App() {
       <LocationModal />
 
       <main className="relative w-full min-h-screen">
-        {isTrackOpen ? (
+        {isAdminOpen ? (
+          <AdminDashboard key="admin-session" onBackToCatalog={handleCloseAdmin} />
+        ) : isTrackOpen ? (
           <OrderTrackingPage onBackToCatalog={handleCloseTrackPage} />
+        ) : legalPolicy ? (
+          <LegalPolicyPage
+            policyType={legalPolicy}
+            onBackToCatalog={() => {
+              setLegalPolicy(null);
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }}
+          />
         ) : isCheckoutOpen ? (
           <CheckoutPage onBackToCatalog={() => setSelectedProduct(null)} />
         ) : (

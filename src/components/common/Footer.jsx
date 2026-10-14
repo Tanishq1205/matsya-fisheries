@@ -222,10 +222,59 @@ export default function Footer({
       {/* ─── SECTION DIVIDER ─── */}
       <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
+      {/* 🛡️ FSSAI & GST Compliance Strip */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-4 my-2">
+        <div className="py-3 px-4 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs text-[#FAF7EE]/70 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-[#FAF7EE]/10 text-white font-bold text-[10px]">FSSAI</span>
+            <span>Lic. No. <strong>2152600300033</strong></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-[#FAF7EE]/10 text-white font-bold text-[10px]">GSTIN</span>
+            <span><strong>27AAUCM6344G1ZZ</strong></span>
+          </div>
+          <div>
+            <span className="text-white/60">100% RO Washed & Temperature-Controlled Cold-Chain</span>
+          </div>
+        </div>
+      </div>
+
       {/* 📜 Bottom Bar */}
-      <div className="bg-[#0B0821] py-6 px-4 sm:px-8 text-center sm:flex sm:items-center sm:justify-between text-[11px] text-white/50 max-w-6xl mx-auto">
+      <div className="bg-[#0B0821] py-6 px-4 sm:px-8 text-center sm:flex sm:items-center sm:justify-between text-[11px] text-white/50 max-w-6xl mx-auto border-t border-white/5">
         <p>© {new Date().getFullYear()} Matsya Fisheries. All rights reserved.</p>
-        <p className="mt-2 sm:mt-0 font-medium">
+
+        {/* Legal Policy Links (Anchor tags opening standalone pages via Hash) */}
+        <div className="flex flex-wrap items-center justify-center gap-3 my-3 sm:my-0 text-white/70 font-medium">
+          <a
+            href="#terms"
+            className="hover:text-[#D5C582] transition-colors"
+          >
+            Terms of Service
+          </a>
+          <span>•</span>
+          <a
+            href="#privacy-policy"
+            className="hover:text-[#D5C582] transition-colors"
+          >
+            Privacy Policy
+          </a>
+          <span>•</span>
+          <a
+            href="#refund-policy"
+            className="hover:text-[#D5C582] transition-colors"
+          >
+            Refund Policy
+          </a>
+          <span>•</span>
+          <a
+            href="#shipping-policy"
+            className="hover:text-[#D5C582] transition-colors"
+          >
+            Shipping Policy
+          </a>
+        </div>
+
+        <p className="font-medium text-white/60">
           Fresh Coastal Seafood Delivered Across Mumbai 🌊
         </p>
       </div>

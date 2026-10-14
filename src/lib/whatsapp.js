@@ -1,0 +1,50 @@
+/**
+ * Helper utilities for WhatsApp messaging across Matsya Fisheries
+ */
+
+/**
+ * Generates a pre-filled WhatsApp link with a formatted dispatch receipt.
+ * @param {Object} order - Order object from Supabase `orders` table
+ * @returns {string} - Direct wa.me link with encoded receipt message
+ */
+export const getWhatsAppReceiptLink = (order) => {
+  if (!order) return '#';
+
+  const orderIdTag = order.order_number
+    ? `#MATSYA-${order.order_number}`
+    : `#MATSYA-${order.id ? String(order.id).slice(0, 6).toUpperCase() : 'XXXX'}`;
+
+  const currentStatus = (order.order_status || 'placed').toUpperCase();
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  const itemsList =
+    items.length > 0
+      ? items
+          .map(
+            (item) =>
+              `• *${item.name}* (${item.weight || 'Standard'} | ${item.cut || 'Cleaned'}) x${item.quantity || 1} — ₹${(item.price || 0) * (item.quantity || 1)}`
+          )
+          .join('\n')
+      : '• *Fresh Catch Items*';
+
+  const message = `🌊 *MATSYA FISHERIES — DISPATCH RECEIPT* 🌊
+
+*Order ID:* ${orderIdTag}
+*Customer:* ${order.customer_name || 'Valued Customer'}
+*Phone:* ${order.customer_phone || ''}
+
+🛒 *CATCH BASKET:*
+${itemsList}
+
+💵 *Total Amount:* ₹${order.total_amount || 0} (${order.payment_method === 'UPI' ? 'Paid via UPI' : 'Cash on Delivery'})
+📍 *Delivery Address:* ${order.delivery_address || 'N/A'}${order.pincode ? ` - \${order.pincode}` : ''}${order.landmark ? ` (Landmark: \${order.landmark})` : ''}
+🚚 *Delivery Slot:* ${order.delivery_slot || 'Morning Catch'}
+📊 *Order Status:* *${currentStatus}*
+
+🔗 *Live Order Tracking:* https://matsyafisheries.com/#track
+
+Thank you for choosing Matsya Fisheries! Fresh dock catches delivered daily. 🐟`;
+
+  const cleanPhone = String(order.customer_phone || '').replace(/\D/g, '');
+  return `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`;
+};
