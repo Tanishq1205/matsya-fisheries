@@ -1,11 +1,13 @@
 # Matsya Fisheries owner guide
 
+For additional staff logins, see [STAFF-ACCOUNTS.md](STAFF-ACCOUNTS.md).
+
 Security implementation reference: [Supabase Row Level Security documentation](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
 ## Before launch
 
 1. Back up Supabase and test the migration on staging. Apply `supabase/migrations/202610140001_order_privacy.sql` in the SQL Editor. It replaces all existing orders policies; old orders remain visible only to staff because they have no verified owner. Review other database functions/views for alternate access to orders. The retired PIN function is revoked for its text signature; remove any other overloads and public functions that expose orders.
-2. Enable Anonymous Sign-ins in Supabase Authentication. Configure its abuse protection/rate limits before public launch. Customers get an authenticated guest session automatically. Enable CAPTCHA with the corresponding client challenge if required by your settings; the current checkout does not supply a CAPTCHA token.
+2. Enable Anonymous Sign-ins in Supabase Authentication. Configure its abuse protection/rate limits before public launch. Customers get an authenticated guest session automatically. Enable CAPTCHA with the corresponding client challenge if required by your settings; checkout and staff login supply a Turnstile CAPTCHA token when configured. See CAPTCHA-SETUP.md.
 3. Create a permanent staff email/password user in Supabase Auth. Set their **app_metadata** to `{"role":"admin"}` using a trusted server/Admin API or the SQL below. Never assign this via user_metadata or expose service-role/secret keys in Vite environment variables. Sign in again after role changes.
 
    ```sql

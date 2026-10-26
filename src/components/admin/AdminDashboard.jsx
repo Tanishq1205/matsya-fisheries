@@ -1,6 +1,6 @@
 import { cleanProductText } from '../../services/productCopy';
 import { formatDeliveryDate } from '../../services/preorder';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Search, Clock, ShoppingBag, RefreshCw, Lock, MessageCircle } from 'lucide-react';
 import { adminSupabase as supabase } from '../../lib/supabaseClient';
 import { getWhatsAppReceiptLink } from '../../lib/whatsapp';
@@ -35,11 +35,33 @@ export default function AdminDashboard({ onBackToCatalog }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
-  // Never keep the passkey unlocked between visits: wipe any old saved flag,
-  // and lock again whenever the dashboard is left (component unmounts).
+  const sessionVersion = useRef(0);
+  const requestVersion = useRef(0);
+  const saving = useRef(false);
+
   useEffect(() => {
+    const invalidateRequests = () => {
+      sessionVersion.current++;
+      requestVersion.current++;
+    };
     sessionStorage.removeItem('matsya_admin_auth');
-    return () => { void supabase.auth.signOut(); };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (['TOKEN_REFRESHED', 'USER_UPDATED'].includes(event) && session &&
+        (session.user.is_anonymous || session.user.app_metadata?.role !== 'admin'))) {
+        sessionVersion.current++;
+        requestVersion.current++;
+        setIsAuthenticated(false);
+        setOrders([]);
+        setPinInput('');
+        setLoadError('');
+        setIsLoading(false);
+      }
+    });
+    return () => {
+      invalidateRequests();
+      subscription.unsubscribe();
+      void supabase.auth.signOut({ scope: 'local' });
+    };
   }, []);
 
 
@@ -53,20 +75,24 @@ const handlePinSubmit = async (e) => {
     return;
   }
 
+  const version = sessionVersion.current;
   setIsSigningIn(true);
   try {
     // RLS verifies the signed staff session independently of this form.
     const captchaToken = await requestCaptchaToken();
+    if (version !== sessionVersion.current) return;
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pinInput, options: { captchaToken } });
 
     if (error) throw error;
 
-    if (data.user?.app_metadata?.role === 'admin') {
+    if (version !== sessionVersion.current) return;
+    if (!data.user?.is_anonymous && data.user?.app_metadata?.role === 'admin') {
+      setPinInput('');
       setIsAuthenticated(true);
       setPinError('');
       fetchOrders();
     } else {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       setPinError('This account does not have staff access.');
       setPinInput('');
     }
@@ -77,25 +103,39 @@ const handlePinSubmit = async (e) => {
 };
 
   const fetchOrders = async () => {
+    if (saving.current) return;
+    const request = ++requestVersion.current;
     setIsLoading(true);
     setLoadError('');
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setOrders(data || []);
+      const allOrders = [];
+      let offset = 0;
+      // Read every page instead of silently stopping at the API's row limit.
+      while (true) {
+        const { data, error } = await supabase.from('orders').select('*')
+          .order('created_at', { ascending: false }).order('id', { ascending: false })
+          .range(offset, offset + 499);
+        if (request !== requestVersion.current) return;
+        if (error) throw error;
+        if (!data?.length) break;
+        allOrders.push(...data);
+        offset += data.length;
+      }
+      setOrders([...new Map(allOrders.map(order => [order.id, order])).values()]);
     } catch (err) {
-      console.error('Error fetching admin orders:', err.message);
-      setLoadError('Orders could not be refreshed. Please try again.');
+      if (request === requestVersion.current) {
+        console.error('Error fetching admin orders:', err.message);
+        setLoadError('Orders could not be refreshed. The list may be out of date. Please try again.');
+      }
     } finally {
-      setIsLoading(false);
+      if (request === requestVersion.current) setIsLoading(false);
     }
   };
 
   const handleUpdateStatus = async (orderId, newStatus) => {
+    if (saving.current || isLoading) return;
+    saving.current = true;
+    const version = sessionVersion.current;
     setUpdatingOrderId(orderId);
     try {
       const { data, error } = await supabase
@@ -106,7 +146,8 @@ const handlePinSubmit = async (e) => {
 
       if (error) throw error;
 
-      // Optimistic state update
+      if (version !== sessionVersion.current) return;
+      // Only display the value confirmed by the database.
       setOrders((prev) =>
         prev.map((ord) => (ord.id === data.id ? { ...ord, order_status: data.order_status } : ord))
       );
@@ -114,23 +155,27 @@ const handlePinSubmit = async (e) => {
       console.error('Failed to update status:', err.message);
       alert('Could not update status. Please check your Supabase connection.');
     } finally {
+      saving.current = false;
       setUpdatingOrderId(null);
     }
   };
 
-  // Filtered orders calculation
   const handleCollectPayment = async (order) => {
+    if (saving.current || isLoading) return;
     if (!window.confirm(`Confirm you received ${formatOrderAmount(order.total_amount)} for this order${order.payment_method === 'UPI' ? ' and verified the UPI receipt' : ' in cash'}?`)) return;
+    saving.current = true;
+    const version = sessionVersion.current;
     setUpdatingOrderId(order.id);
     try {
       const { data, error } = await supabase.from('orders')
         .update({ payment_status: 'paid' }).eq('id', order.id)
         .select('id, payment_status').single();
       if (error) throw error;
+      if (version !== sessionVersion.current) return;
       setOrders(previous => previous.map(item => item.id === data.id ? { ...item, payment_status: data.payment_status } : item));
     } catch (err) {
       alert(`Could not record payment: ${err.message}`);
-    } finally { setUpdatingOrderId(null); }
+    } finally { saving.current = false; setUpdatingOrderId(null); }
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -142,7 +187,7 @@ const handlePinSubmit = async (e) => {
       !query ||
       (order.customer_name && order.customer_name.toLowerCase().includes(query)) ||
       (order.customer_phone && order.customer_phone.includes(query)) ||
-      (order.order_number && String(order.order_number).includes(query)) ||
+      (order.order_number && (`#matsya-${order.order_number}`.includes(query) || String(order.order_number).includes(query))) ||
       (order.id && String(order.id).toLowerCase().includes(query)) ||
       (order.pincode && String(order.pincode).includes(query));
 
@@ -150,12 +195,12 @@ const handlePinSubmit = async (e) => {
   });
 
   // Calculate live summary stats
-  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const totalOrderValue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const pendingCount = orders.filter((o) => (o.order_status || 'placed') === 'placed').length;
   const processingCount = orders.filter((o) => o.order_status === 'dock_processing').length;
   const transitCount = orders.filter((o) => o.order_status === 'out_for_delivery').length;
 
-  // 🔒 PIN AUTHENTICATION GATE
+  // Staff authentication gate
   if (!isAuthenticated) {
     return (
       <div className="w-full bg-[#FAF7EE] text-[#1D184D] min-h-screen pt-28 pb-20 font-['Sora',sans-serif] flex items-center justify-center px-4">
@@ -180,7 +225,7 @@ const handlePinSubmit = async (e) => {
     aria-label="Password"
     value={pinInput}
     onChange={(e) => setPinInput(e.target.value)}
-    placeholder=""
+    placeholder="Password"
     className="w-full text-center text-sm font-bold py-3.5 bg-[#FAF7EE] border border-[#1D184D]/20 rounded-full text-[#1D184D] focus:outline-none focus:border-[#1D184D] tracking-[0.4em] placeholder:tracking-normal placeholder:text-xs placeholder:font-semibold placeholder:text-[#1D184D]/40"
   />
 
@@ -230,6 +275,7 @@ const handlePinSubmit = async (e) => {
           <div className="flex items-center gap-3">
             <button
               type="button"
+              disabled={isLoading || updatingOrderId !== null}
               onClick={fetchOrders}
               className="px-4 py-2 rounded-full bg-white border border-[#1D184D]/15 text-xs font-bold text-[#1D184D] flex items-center gap-1.5 hover:bg-[#FAF7EE] transition-colors cursor-pointer shadow-sm"
             >
@@ -240,7 +286,12 @@ const handlePinSubmit = async (e) => {
               type="button"
               onClick={() => {
                 sessionStorage.removeItem('matsya_admin_auth');
-                void supabase.auth.signOut();
+                sessionVersion.current++;
+                requestVersion.current++;
+                void supabase.auth.signOut({ scope: 'local' });
+                setPinInput('');
+                setLoadError('');
+                setIsLoading(false);
                 setOrders([]);
                 setIsAuthenticated(false);
               }}
@@ -255,8 +306,8 @@ const handlePinSubmit = async (e) => {
         {/* Live Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-[#1D184D]/10 shadow-sm">
-            <span className="text-[11px] font-bold text-[#1D184D]/60 uppercase tracking-wider block">Total Revenue</span>
-            <span className="text-2xl font-black text-[#1D184D] mt-1 block">₹{totalRevenue.toLocaleString('en-IN')}</span>
+            <span className="text-[11px] font-bold text-[#1D184D]/60 uppercase tracking-wider block">Total Order Value</span>
+            <span className="text-2xl font-black text-[#1D184D] mt-1 block">₹{totalOrderValue.toLocaleString('en-IN')}</span>
             <span className="text-[10px] text-[#2B7A4B] font-bold mt-1 block">{orders.length} total orders</span>
           </div>
 
@@ -314,7 +365,8 @@ const handlePinSubmit = async (e) => {
         </div>
 
         {/* Orders List */}
-        {filteredOrders.length === 0 ? (
+        {isLoading && <p role="status" className="text-sm">Loading orders...</p>}
+        {!isLoading && filteredOrders.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#1D184D]/10 space-y-2">
             <ShoppingBag className="w-10 h-10 text-[#1D184D]/20 mx-auto" />
             <h3 className="text-base font-bold text-[#1D184D]">No orders match your filter</h3>
@@ -380,6 +432,7 @@ const handlePinSubmit = async (e) => {
                       <p className="text-[#1D184D]/80 mt-0.5 leading-snug">
                         {order.delivery_address} - <span className="font-bold">{order.pincode}</span>
                       </p>
+                      {order.landmark && <p className="mt-1">Landmark: {order.landmark}</p>}
                     </div>
 
                     <div>
@@ -388,7 +441,7 @@ const handlePinSubmit = async (e) => {
                       <p className="text-[#1D184D]/80 font-semibold">Slot: {order.delivery_slot || 'Morning Catch'}</p>
                       <p className="text-[#1D184D]/80 font-semibold mt-0.5">Payment: {order.payment_method === 'UPI' ? 'UPI on delivery' : 'Cash on Delivery'} ({order.payment_status || 'pending'})</p>
                       {String(order.payment_status || 'pending').toLowerCase() === 'pending' && (
-                        <button type="button" disabled={updatingOrderId === order.id}
+                        <button type="button" disabled={isLoading || updatingOrderId !== null}
                           onClick={() => handleCollectPayment(order)}
                           className="mt-2 rounded-lg px-3 py-2 bg-[#2B7A4B]/10 text-[#2B7A4B] font-bold disabled:opacity-40">
                           Mark payment collected
@@ -433,7 +486,7 @@ const handlePinSubmit = async (e) => {
                   <div className="pt-2 border-t border-[#1D184D]/10 flex flex-wrap items-center justify-between gap-3">
                     <span className="text-xs font-bold text-[#1D184D]/70">Change Status:</span>
 
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                    <div className="flex flex-wrap items-center gap-2 pb-1 sm:pb-0">
                       {[
                         { key: 'placed', label: 'Placed' },
                         { key: 'dock_processing', label: 'Processing' },
@@ -443,7 +496,7 @@ const handlePinSubmit = async (e) => {
                         <button
                           key={st.key}
                           type="button"
-                          disabled={updatingOrderId === order.id}
+                          disabled={isLoading || updatingOrderId !== null}
                           onClick={() => handleUpdateStatus(order.id, st.key)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             currentStatus === st.key

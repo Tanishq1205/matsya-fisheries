@@ -16,6 +16,8 @@ let order;
 let submissions = 0;
 let rejectStatus = false;
 let preorderNotice = 2;
+let extraOrder = false;
+let failOrderRead = false;
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await context.addInitScript(() => {
   window.turnstile = { render: (_, options) => { setTimeout(() => options.callback('mock-token'), 50); return 'mock'; }, remove: () => {} };
@@ -26,7 +28,11 @@ await context.route('**/*.supabase.co/**', async route => {
   const json = data => route.fulfill({ json: data });
   if (url.pathname.includes('/auth/v1/')) {
     if (url.pathname.endsWith('/logout')) return json({});
-    const admin = url.searchParams.get('grant_type') === 'password';
+    const passwordLogin = url.searchParams.get('grant_type') === 'password';
+    if (passwordLogin && req.postDataJSON().password === 'wrong-password') {
+      return route.fulfill({ status: 400, json: { message: 'Invalid login credentials' } });
+    }
+    const admin = passwordLogin && req.postDataJSON().email !== 'customer@example.com';
     const user = { id: admin ? '22222222-2222-4222-8222-222222222222' : '11111111-1111-4111-8111-111111111111', aud: 'authenticated', role: 'authenticated', is_anonymous: !admin, app_metadata: admin ? { role: 'admin' } : {} };
     const payload = { sub: user.id, role: 'authenticated', exp: Math.floor(Date.now()/1000) + 3600, app_metadata: user.app_metadata, is_anonymous: !admin };
     const token = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.mock`;
@@ -53,7 +59,10 @@ await context.route('**/*.supabase.co/**', async route => {
       order = { ...order, ...req.postDataJSON() };
       return json(order);
     }
-    return json(order ? [order] : []);
+    if (failOrderRead) return route.fulfill({ status: 500, json: { message: 'Simulated read failure' } });
+    const offset = Number(url.searchParams.get('offset') || 0);
+    if (extraOrder && offset === 1) return json([{ ...order, id: '55555555-5555-4555-8555-555555555555', order_number: 124 }]);
+    return json(order && offset === 0 ? [order] : []);
   }
   return route.fulfill({ status: 400, json: { message: 'Unexpected test request' } });
 });
@@ -124,10 +133,55 @@ try {
   console.log('PASS: tracking reload, related-product URL/reload, legal reload and catalog navigation');
   await page.keyboard.press('Control+Shift+A');
   await page.getByLabel('Staff email').fill('review@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('wrong-password');
+  await page.getByRole('button', { name: 'SIGN IN', exact: true }).click();
+  await page.getByText('Invalid login credentials', { exact: true }).waitFor();
+  await page.getByLabel('Staff email').fill('customer@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('test-only-password');
+  await page.getByRole('button', { name: 'SIGN IN', exact: true }).click();
+  await page.getByText('This account does not have staff access.', { exact: true }).waitFor();
+  assert.equal(await page.getByText('#MATSYA-123', { exact: true }).count(), 0);
+  await page.getByLabel('Staff email').fill('review@example.com');
   await page.getByLabel('Password', { exact: true }).fill('test-only-password');
   await page.getByRole('button', { name: 'SIGN IN', exact: true }).click();
   await page.getByText('#MATSYA-123', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Refresh', exact: true }).waitFor();
+  await page.waitForFunction(() => !document.querySelector('button:disabled'));
+  assert.match(await page.locator('main').innerText(), /Total Order Value/i);
+  extraOrder = true;
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByText('#MATSYA-124', { exact: true }).waitFor();
+  assert.ok((await page.locator('main').innerText()).includes('2 total orders'));
+  failOrderRead = true;
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Orders could not be refreshed' }).waitFor();
+  await page.getByText('#MATSYA-124', { exact: true }).waitFor();
+  failOrderRead = false;
+  extraOrder = false;
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByText('#MATSYA-124', { exact: true }).waitFor({ state: 'hidden' });
+  console.log('PASS: pagination follows server-limited pages, failed refresh preserves list with visible error, refresh recovers');
+  const search = page.getByPlaceholder('Search Name, Phone, Order #...');
+  for (const query of ['#MATSYA-123', 'Review', '9876543210', '400015']) {
+    await search.fill(query);
+    await page.getByText('#MATSYA-123', { exact: true }).waitFor();
+  }
+  await search.fill('no such customer');
+  await visible('No orders match your filter');
+  await search.fill('');
+  await page.getByRole('button', { name: 'Delivered', exact: true }).first().click();
+  await visible('No orders match your filter');
+  await page.getByRole('button', { name: 'All Orders', exact: true }).click();
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('button', { name: 'Mark payment collected', exact: true }).click();
+  assert.equal(order.payment_status, 'pending');
   page.on('dialog', dialog => dialog.accept());
+  rejectStatus = true;
+  await page.getByRole('button', { name: 'Mark payment collected', exact: true }).click();
+  await page.waitForTimeout(300);
+  assert.equal(order.payment_status, 'pending');
+  assert.equal(await page.getByRole('button', { name: 'Mark payment collected', exact: true }).count(), 1);
+  rejectStatus = false;
   await page.getByRole('button', { name: 'Mark payment collected', exact: true }).click();
   assert.equal(order.payment_status, 'paid');
   await page.getByRole('button', { name: 'Delivered', exact: true }).last().click();
@@ -137,6 +191,19 @@ try {
   await page.getByRole('button', { name: 'Placed', exact: true }).last().click();
   await page.waitForTimeout(300);
   assert.equal(order.order_status, 'delivered');
+  await page.getByRole('button', { name: 'Lock', exact: true }).click();
+  await page.getByLabel('Password', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel('Password', { exact: true }).inputValue(), '');
+  assert.equal(await page.getByText('#MATSYA-123', { exact: true }).count(), 0);
+  await page.getByLabel('Password', { exact: true }).fill('test-only-password');
+  await page.getByRole('button', { name: 'SIGN IN', exact: true }).click();
+  await page.getByText('#MATSYA-123', { exact: true }).waitFor();
+  await page.evaluate(async () => {
+    const { adminSupabase } = await import('/src/lib/supabaseClient.js');
+    await adminSupabase.auth.signOut({ scope: 'local' });
+  });
+  await page.getByLabel('Password', { exact: true }).waitFor();
+  assert.equal(await page.getByText('#MATSYA-123', { exact: true }).count(), 0);
   await page.reload(); await ready();
   assert.ok(!page.url().includes('#admin'));
   console.log('PASS: simulated staff login, payment/status confirmation, failed update, admin reload to home');
@@ -203,6 +270,11 @@ try {
   await page.getByRole('button', { name: 'SIGN IN', exact: true }).click();
   await page.getByText('#MATSYA-123', { exact: true }).waitFor();
   assert.ok((await page.locator('main').innerText()).includes(`Delivery ${formatDeliveryDate(deliveryDate)}`));
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `admin overflow at ${width}`);
+  }
+  console.log('PASS: invalid credentials, non-admin rejection, search/filters, cancelled/failed payment, lock clears password, session sign-out locks dashboard, admin responsive widths');
   await page.goto(`${base}/?category=Premium%20Sea%20Fish#all-products`); await ready();
   await page.getByRole('heading', { name: 'Premium fish, by preorder' }).waitFor();
   await page.getByText('Pre-order for a later date', { exact: true }).click();
