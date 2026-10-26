@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Menu, X, MapPin, ChevronDown, Search, Check, AlertCircle, Loader2, Navigation } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShoppingBag, Menu, X, MapPin, ChevronDown, Search, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { useLocationStore } from '../../store/useLocationStore';
 import { supabase } from '../../lib/supabaseClient';
 
 const MATSYA_WHATSAPP_NUMBER = '919372379317';
 const BULK_INQUIRY_TEXT = encodeURIComponent(
-  'Hello Matsya Fisheries, I would like to inquire about bulk / wholesale seafood supply for my business.'
+  'Hello Matsya Fisheries, I would like to discuss a business opportunity with your team.'
 );
 const WHATSAPP_BULK_URL = `https://wa.me/${MATSYA_WHATSAPP_NUMBER}?text=${BULK_INQUIRY_TEXT}`;
 
@@ -19,12 +19,12 @@ export default function Navbar({
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isDarkHeader = isScrolled || mobileMenuOpen;
 
   // Dropdown & Location Check State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [pincodeInput, setPincodeInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
-  const [isDetectingGps, setIsDetectingGps] = useState(false);
   const [status, setStatus] = useState(null); // { type: 'success' | 'error', message: string }
 
   const dropdownRef = useRef(null);
@@ -107,7 +107,7 @@ export default function Navbar({
 
       if (error) throw error;
 
-      if (data && data.status && data.status.toLowerCase().includes('available')) {
+      if (data && data.status && ['Available', 'Available (legacy)'].includes(data.status)) {
         const areaName = data.area || 'Mumbai';
         setLocation({
           area: areaName,
@@ -136,63 +136,31 @@ export default function Navbar({
     }
   };
 
-  // Browser GPS detection
-  const handleGpsLocation = () => {
-    if (!navigator.geolocation) {
-      setStatus({ type: 'error', message: 'GPS not supported by browser' });
-      return;
-    }
-
-    setIsDetectingGps(true);
-    setStatus(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setIsDetectingGps(false);
-        const activePin = location?.pincode || '400089';
-        const activeArea = location?.area || 'Tilak Nagar';
-        setLocation({ area: activeArea, pincode: activePin });
-        setStatus({ type: 'success', message: '⚡ Location updated!' });
-
-        setTimeout(() => {
-          setIsDropdownOpen(false);
-          setStatus(null);
-        }, 800);
-      },
-      () => {
-        setIsDetectingGps(false);
-        setStatus({ type: 'error', message: 'GPS access denied. Enter pincode manually.' });
-      },
-      { timeout: 8000 }
-    );
-  };
-
   const navLinks = [
     { label: 'Catches', href: '#all-products', isExternal: false },
-    { label: 'Our Story', href: '#story', isExternal: false },
     { label: 'TRACK ORDER', onClick: handleTrackClick, isButton: true },
-    { label: 'Contact for Bulk', href: WHATSAPP_BULK_URL, isExternal: true },
+    { label: 'Contact for Business', href: WHATSAPP_BULK_URL, isExternal: true },
   ];
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 flex justify-center pointer-events-none pt-3 sm:pt-4 px-4 sm:px-6 select-none font-['Sora',sans-serif]">
-        <nav className="relative pointer-events-auto w-full max-w-6xl flex items-center justify-between py-2.5 px-4 sm:px-8">
+      <header className="fixed top-0 left-0 right-0 z-[45] flex justify-center pointer-events-none pt-3 sm:pt-4 px-4 sm:px-6 select-none font-['Sora',sans-serif]">
+        <nav className="relative pointer-events-auto w-full max-w-6xl flex items-center justify-between gap-3 xl:gap-6 py-2.5 px-2 sm:px-6">
           {/* Floating Pill Background */}
           <div
             className={`absolute inset-0 rounded-full border transition-all duration-300 ease-out pointer-events-none ${
-              isScrolled
+              isDarkHeader
                 ? 'opacity-100 scale-100 bg-[#1D184D] border-[#D5C582]/25 shadow-[0_12px_32px_rgba(23,22,79,0.35)]'
                 : 'opacity-0 scale-95 bg-transparent border-transparent'
             }`}
           />
 
           {/* Left Side: Brand Logo + Location Pill */}
-          <div className="relative z-10 flex items-center gap-3 sm:gap-5" ref={dropdownRef}>
+          <div className="relative z-10 flex min-w-0 flex-1 xl:flex-none items-center gap-2 sm:gap-4" ref={dropdownRef}>
             <a
               href="/"
               onClick={handleLogoClick}
-              className="flex items-center gap-2.5 transition-transform duration-200 active:scale-95"
+              className="flex shrink-0 items-center gap-2.5 whitespace-nowrap transition-transform duration-200 active:scale-95"
             >
               <img
                 src={logoSrc}
@@ -205,8 +173,8 @@ export default function Navbar({
               />
               <span
                 style={{ fontFamily: "'Sora', sans-serif" }}
-                className={`font-medium text-[16px] sm:text-[19px] tracking-[0.2em] uppercase transition-colors duration-200 select-none ${
-                  isScrolled ? 'text-[#FAF7EE]' : 'text-[#1D184D]'
+                className={`hidden sm:inline font-medium text-[16px] sm:text-[19px] tracking-[0.2em] uppercase transition-colors duration-200 select-none ${
+                  isDarkHeader ? 'text-[#FAF7EE]' : 'text-[#1D184D]'
                 }`}
               >
                 MATSYA
@@ -214,12 +182,12 @@ export default function Navbar({
             </a>
 
             {/* 📍 Location Selector Pill & Floating Dropdown */}
-            <div className="relative">
+            <div className="relative min-w-0 flex-1 max-w-[140px] sm:max-w-[200px]">
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className={`flex items-center gap-1.5 py-1 px-2.5 sm:px-3 rounded-full border transition-all duration-200 cursor-pointer active:scale-95 max-w-[140px] sm:max-w-[200px] ${
-                  isScrolled
+                className={`flex w-full min-w-0 items-center gap-1.5 py-1 px-2.5 sm:px-3 rounded-full border transition-all duration-200 cursor-pointer active:scale-95 ${
+                  isDarkHeader
                     ? 'border-[#D5C582]/30 bg-white/10 text-[#FAF7EE] hover:border-[#D5C582]'
                     : 'border-[#1D184D]/15 bg-[#1D184D]/5 text-[#1D184D] hover:bg-[#1D184D]/10'
                 }`}
@@ -239,7 +207,7 @@ export default function Navbar({
 
               {/* 🔽 COMPACT LOCATION DROPDOWN BOX */}
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-72 sm:w-80 bg-[#16123D] border-2 border-[#D5C582] rounded-2xl p-4 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 text-[#FAF7EE] animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed top-20 left-4 right-4 sm:absolute sm:top-full sm:left-0 sm:right-auto mt-2 sm:w-80 bg-[#16123D] border-2 border-[#D5C582] rounded-2xl p-4 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 text-[#FAF7EE] animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#D5C582]">
                       Check Delivery Pincode
@@ -284,17 +252,6 @@ export default function Navbar({
                     </div>
                   </form>
 
-                  {/* GPS Location Button */}
-                  <button
-                    type="button"
-                    onClick={handleGpsLocation}
-                    disabled={isDetectingGps}
-                    className="w-full mt-2.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-2 text-[11px] font-bold text-[#D5C582] cursor-pointer transition-colors"
-                  >
-                    <Navigation className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
-                    <span>{isDetectingGps ? 'Detecting...' : 'Detect My Location'}</span>
-                  </button>
-
                   {/* Dynamic Database Feedback */}
                   {status && (
                     <div
@@ -318,7 +275,7 @@ export default function Navbar({
           </div>
 
           {/* Desktop Navigation Links */}
-          <div className="relative z-10 hidden md:flex items-center gap-6 lg:gap-8 text-[12px] font-semibold tracking-[0.16em] uppercase">
+          <div className="relative z-10 hidden xl:flex shrink-0 items-center gap-7 whitespace-nowrap text-[12px] font-semibold tracking-[0.12em] uppercase">
             {navLinks.map((link) =>
               link.isButton ? (
                 <button
@@ -326,7 +283,7 @@ export default function Navbar({
                   type="button"
                   onClick={link.onClick}
                   className={`relative py-1 transition-colors duration-200 cursor-pointer ${
-                    isScrolled
+                    isDarkHeader
                       ? 'text-[#FAF7EE]/70 hover:text-[#D5C582]'
                       : 'text-[#1D184D]/70 hover:text-[#1D184D]'
                   }`}
@@ -340,7 +297,7 @@ export default function Navbar({
                   target={link.isExternal ? '_blank' : undefined}
                   rel={link.isExternal ? 'noopener noreferrer' : undefined}
                   className={`relative py-1 transition-colors duration-200 ${
-                    isScrolled
+                    isDarkHeader
                       ? 'text-[#FAF7EE]/70 hover:text-[#D5C582]'
                       : 'text-[#1D184D]/70 hover:text-[#1D184D]'
                   }`}
@@ -352,18 +309,18 @@ export default function Navbar({
           </div>
 
           {/* Cart Trigger & Mobile Menu Toggle */}
-          <div className="relative z-10 flex items-center gap-3">
+          <div className="relative z-10 flex shrink-0 items-center gap-1 sm:gap-3 whitespace-nowrap">
             <button
               onClick={handleCartClick}
               aria-label="View Shopping Cart"
               className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border transition-all duration-200 active:scale-95 cursor-pointer ${
-                isScrolled
+                isDarkHeader
                   ? 'border-[#D5C582]/30 bg-white/10 text-[#FAF7EE] hover:bg-white/15'
                   : 'border-[#1D184D]/15 bg-[#1D184D]/5 text-[#1D184D] hover:bg-[#1D184D]/10'
               }`}
             >
               <ShoppingBag className="w-4 h-4 stroke-[2]" />
-              <span className="text-[11px] sm:text-xs font-semibold tracking-[0.14em] uppercase">
+              <span className="hidden sm:inline text-[11px] sm:text-xs font-semibold tracking-[0.14em] uppercase">
                 Cart
               </span>
               {cartCount > 0 && (
@@ -376,8 +333,9 @@ export default function Navbar({
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation"
-              className={`md:hidden p-2 rounded-full transition-colors ${
-                isScrolled ? 'text-[#FAF7EE]' : 'text-[#1D184D]'
+              aria-expanded={mobileMenuOpen}
+              className={`xl:hidden p-2 rounded-full transition-colors ${
+                isDarkHeader ? 'text-[#FAF7EE]' : 'text-[#1D184D]'
               }`}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -388,7 +346,7 @@ export default function Navbar({
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-[#1D184D]/95 backdrop-blur-md flex flex-col justify-center items-center gap-8 text-[#FAF7EE] select-none">
+        <div className="fixed inset-0 z-40 xl:hidden bg-[#1D184D]/95 backdrop-blur-md flex flex-col justify-center items-center gap-8 text-[#FAF7EE] select-none">
           <nav className="flex flex-col items-center gap-7 text-lg tracking-[0.18em] uppercase font-semibold">
             {navLinks.map((link) =>
               link.isButton ? (

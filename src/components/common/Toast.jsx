@@ -1,49 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ShoppingBag, X, CheckCircle2 } from 'lucide-react';
 import { useToastStore } from '../../store/useToastStore';
 
 export default function Toast() {
   const { toast, hideToast } = useToastStore();
+  return toast ? <ToastMessage key={toast.id} activeToast={toast} hideToast={hideToast} /> : null;
+}
+
+function ToastMessage({ activeToast, hideToast }) {
   const [isVisible, setIsVisible] = useState(false);
-  const [activeToast, setActiveToast] = useState(null);
-
+  const [isLeaving, setIsLeaving] = useState(false);
   useEffect(() => {
-    if (toast) {
-      setActiveToast(toast);
-      setIsVisible(false); // Force initial hidden state in DOM
-
-      // 20ms delay guarantees the browser paints opacity-0 before animating to opacity-100
-      const enterTimer = setTimeout(() => {
-        setIsVisible(true);
-      }, 20);
-
-      // Auto dismiss after 3 seconds
-      const autoDismissTimer = setTimeout(() => {
-        handleDismiss();
-      }, 3000);
-
-      return () => {
-        clearTimeout(enterTimer);
-        clearTimeout(autoDismissTimer);
-      };
-    }
-  }, [toast]);
-
-  const handleDismiss = () => {
-    setIsVisible(false);
-    // Wait 300ms for fade-out transition before unmounting
-    setTimeout(() => {
-      hideToast();
-      setActiveToast(null);
-    }, 300);
-  };
-
-  if (!activeToast) return null;
+    const enterTimer = setTimeout(() => setIsVisible(true), 20);
+    const dismissTimer = setTimeout(() => setIsLeaving(true), 3000);
+    return () => { clearTimeout(enterTimer); clearTimeout(dismissTimer); };
+  }, []);
+  useEffect(() => {
+    if (!isLeaving) return;
+    const timer = setTimeout(hideToast, 300);
+    return () => clearTimeout(timer);
+  }, [isLeaving, hideToast]);
+  const handleDismiss = () => setIsLeaving(true);
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 max-w-sm w-full px-4 transition-all duration-300 ease-out pointer-events-auto ${
-        isVisible
+      role="status"
+      className={`fixed bottom-6 right-6 z-50 max-w-sm w-[calc(100%-3rem)] px-4 transition-all duration-300 ease-out pointer-events-auto ${
+        isVisible && !isLeaving
           ? 'opacity-100 translate-y-0 scale-100'
           : 'opacity-0 translate-y-4 scale-95'
       }`}
@@ -59,7 +42,7 @@ export default function Toast() {
         <div className="flex-1 min-w-0 pr-1">
           <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#D5C582]">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#6EE7A8]" />
-            <span>Added to Basket</span>
+            <span>Basket update</span>
           </div>
           <p className="text-xs sm:text-sm font-bold text-[#FAF7EE] mt-0.5 leading-snug truncate">
             {activeToast.message}

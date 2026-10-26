@@ -2,7 +2,8 @@ const STORAGE_KEY = 'matsya_checkout_requests_v1';
 
 // Only store a digest and random request ID, never customer details.
 export async function checkoutFingerprint(customerId, payload) {
-  const { created_at: _createdAt, ...order } = payload;
+  const order = { ...payload };
+  delete order.created_at;
   const canonical = value => Array.isArray(value) ? value.map(canonical)
     : value && typeof value === 'object'
       ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;

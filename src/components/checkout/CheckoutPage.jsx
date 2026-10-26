@@ -1,139 +1,71 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
+import { useLocationStore } from '../../store/useLocationStore';
 import { getDeliveryQuote } from '../../services/deliveryService';
+import { formatDeliveryDate } from '../../services/preorder';
 import { placeOrder } from '../../services/orderService';
+
+import { readCustomerDetails } from '../../services/customerDetails';
 
 const LOCAL_STORAGE_KEY = 'matsya_customer_details';
 
 export default function CheckoutPage({ onBackToCatalog }) {
   const cart = useCartStore((state) => state.cart) || [];
+  const isPreorder = cart[0]?.orderType === 'preorder';
+  const preorderDate = isPreorder ? cart[0].deliveryDate : null;
   const clearCart = useCartStore((state) => state.clearCart);
   const closeCheckout = useCartStore((state) => state.closeCheckout);
   const deliverySlot = useCartStore((state) => state.deliverySlot) || 'Morning Catch (7:00 AM – 10:00 AM)';
 
-  // Form State
-  const [formData, setFormData] = useState({
-    phone: '',
-    email: '',
-    firstName: '',
-    lastName: '',
-    pincode: '',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    country: 'India',
-    streetAddress: '',
-    apartment: '',
-    landmark: '',
-    paymentMethod: 'COD',
-    orderNote: '',
-  });
-
-  const [isSavedAddress, setIsSavedAddress] = useState(false);
+  const [savedDetails] = useState(readCustomerDetails);
+  const [formData, setFormData] = useState(() => ({
+    phone: savedDetails.phone || '',
+    email: savedDetails.email || '',
+    firstName: savedDetails.firstName || savedDetails.fullName?.split(' ')[0] || '',
+    lastName: savedDetails.lastName || savedDetails.fullName?.split(' ').slice(1).join(' ') || '',
+    pincode: useLocationStore.getState().location?.pincode || savedDetails.pincode || '',
+    city: savedDetails.city || 'Mumbai', state: savedDetails.state || 'Maharashtra', country: 'India',
+    streetAddress: savedDetails.streetAddress || savedDetails.address || '',
+    apartment: savedDetails.apartment || '', landmark: savedDetails.landmark || '', paymentMethod: 'COD',
+  }));
+  const isSavedAddress = !!savedDetails.phone;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showNoteInput, setShowNoteInput] = useState(false);
 
-  // Dynamic Database Pincode Serviceability State
-  const [isServiceable, setIsServiceable] = useState(true);
-  const [isCheckingPincode, setIsCheckingPincode] = useState(false);
-  const [deliveryQuote, setDeliveryQuote] = useState(null);
-  const quoteRequest = useRef(0);
-
-  // Order Totals
+  const [quoteResult, setQuoteResult] = useState(null);
+  const pin = formData.pincode.trim();
+  const validPin = /^\d{6}$/.test(pin);
+  const isCheckingPincode = validPin && quoteResult?.pincode !== pin;
+  const deliveryQuote = quoteResult?.pincode === pin ? quoteResult.quote : null;
+  const isServiceable = !!deliveryQuote;
   const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  const deliveryFee = deliveryQuote?.pincode === formData.pincode.trim() ? deliveryQuote.fee : null;
-  const gstAmount = Math.round(subtotal * 0.05);
+  const deliveryFee = deliveryQuote?.fee ?? null;
   const totalAmount = Math.round((subtotal + (deliveryFee ?? 0)) * 100) / 100;
 
-  // Real-time Database Check for PIN Code Serviceability
-  const verifyPincodeWithSupabase = useCallback(async (pinToTest) => {
-    const request = ++quoteRequest.current;
-    setDeliveryQuote(null);
-    const cleanedPin = pinToTest.replace(/\D/g, '').trim();
-    if (cleanedPin.length !== 6) {
-      setIsServiceable(false);
-      setIsCheckingPincode(false);
-      return;
+  // Navbar location changes prefill the PIN without overwriting other form fields.
+  useEffect(() => useLocationStore.subscribe((state, previous) => {
+    const nextPin = state.location?.pincode;
+    if (nextPin && nextPin !== previous.location?.pincode) {
+      setFormData(current => ({ ...current, pincode: nextPin }));
     }
+  }), []);
 
-    setIsCheckingPincode(true);
-    try {
-      const quote = await getDeliveryQuote(cleanedPin);
-      if (request !== quoteRequest.current) return;
-      setDeliveryQuote(quote);
-      setIsServiceable(!!quote);
-    } catch (err) {
-      console.error('Error checking pincode in database:', err);
-      if (request === quoteRequest.current) setIsServiceable(false);
-    } finally {
-      if (request === quoteRequest.current) setIsCheckingPincode(false);
-    }
-  }, []);
-
-  // Sync Form Data & Navbar Location on Mount
   useEffect(() => {
-    let navbarPincode = '';
-
-    const possibleLocationKeys = [
-      'matsya_location',
-      'matsya_user_location',
-      'matsya_pincode',
-      'matsya_selected_pincode',
-      'user_pincode',
-    ];
-
-    for (const key of possibleLocationKeys) {
-      const val = localStorage.getItem(key);
-      if (val) {
-        const match = val.match(/\b\d{6}\b/);
-        if (match) {
-          navbarPincode = match[0];
-          break;
-        }
-      }
-    }
-
-    const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let parsed = {};
-    if (savedData) {
-      try {
-        parsed = JSON.parse(savedData);
-        setIsSavedAddress(true);
-      } catch (e) {
-        console.error('Error parsing saved details:', e);
-      }
-    }
-
-    const activePincode = navbarPincode || parsed.pincode || '';
-
-    setFormData((prev) => ({
-      ...prev,
-      phone: parsed.phone || '',
-      email: parsed.email || '',
-      firstName: parsed.firstName || parsed.fullName?.split(' ')[0] || '',
-      lastName: parsed.lastName || parsed.fullName?.split(' ').slice(1).join(' ') || '',
-      streetAddress: parsed.streetAddress || parsed.address || '',
-      apartment: parsed.apartment || '',
-      landmark: parsed.landmark || '',
-      pincode: activePincode,
-      city: parsed.city || 'Mumbai',
-      state: parsed.state || 'Maharashtra',
-    }));
-
-    if (activePincode.length === 6) {
-      verifyPincodeWithSupabase(activePincode);
-    }
-  }, [verifyPincodeWithSupabase]);
+    if (!validPin) return;
+    let cancelled = false;
+    getDeliveryQuote(pin).then(quote => {
+      if (!cancelled) setQuoteResult({ pincode: pin, quote });
+    }).catch(() => {
+      if (!cancelled) setQuoteResult({ pincode: pin, quote: null });
+    });
+    return () => { cancelled = true; };
+  }, [pin, validPin]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (name === 'pincode') {
-      verifyPincodeWithSupabase(value);
-    }
   };
 
   const handleSubmitOrder = async (e) => {
@@ -165,6 +97,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
 
     // Mapped directly to your Supabase orders table schema
     const orderPayload = {
+      ...(isPreorder ? { order_type: 'preorder', delivery_date: preorderDate } : {}),
       customer_name: fullName,
       customer_phone: formData.phone.trim(),
       delivery_address: fullAddress,
@@ -190,7 +123,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
       : `#MATSYA-${data?.id?.slice(0, 6).toUpperCase() || Math.floor(100000 + Math.random() * 900000)}`;
 
     // Save customer details locally for pre-filling next time
-    localStorage.setItem(
+    try { localStorage.setItem(
       LOCAL_STORAGE_KEY,
       JSON.stringify({
         phone: formData.phone.trim(),
@@ -206,10 +139,14 @@ export default function CheckoutPage({ onBackToCatalog }) {
       })
     );
 
+    } catch { /* The confirmed order is already saved on the server. */ }
+
     setOrderSuccess({
       orderId: generatedId,
       totalAmount: data.total_amount,
       customerName: fullName,
+      orderType: data.order_type,
+      deliveryDate: data.delivery_date,
       deliverySlot,
       fullAddress,
     });
@@ -248,10 +185,11 @@ export default function CheckoutPage({ onBackToCatalog }) {
             <ArrowLeft className="w-4 h-4" /> RETURN TO CATALOG
           </button>
           <span className="text-xs font-bold tracking-widest text-[#C2542D] uppercase">
-            DOCK-TO-DOOR CHECKOUT
+            {isPreorder ? 'PREORDER CHECKOUT' : 'DOCK-TO-DOOR CHECKOUT'}
           </span>
         </div>
 
+        {isPreorder && !orderSuccess && <p className="mb-6 rounded-2xl bg-[#D5C582]/20 p-4 text-sm font-bold">Preorder delivery: {formatDeliveryDate(preorderDate)}. Pay on delivery.</p>}
         {/* ORDER SUCCESS SCREEN */}
         {orderSuccess ? (
           <div className="max-w-2xl mx-auto bg-white rounded-3xl p-8 sm:p-12 border border-[#1D184D]/10 shadow-lg text-center space-y-6 my-8">
@@ -263,11 +201,12 @@ export default function CheckoutPage({ onBackToCatalog }) {
               <span className="text-xs font-bold tracking-widest text-[#C2542D] uppercase block mb-1">
                 {orderSuccess.orderId}
               </span>
+              {orderSuccess.orderType === 'preorder' && <p className="text-sm font-bold mb-3">Preorder confirmed for {formatDeliveryDate(orderSuccess.deliveryDate)} · Payment due on delivery</p>}
               <h1 className="text-3xl font-black text-[#1D184D]">
                 Thank You, {orderSuccess.customerName}!
               </h1>
               <p className="text-sm text-[#1D184D]/70 mt-2 max-w-md mx-auto leading-relaxed">
-                Your fresh catch order is confirmed and assigned for dispatch. Our dock team will contact you prior to delivery.
+                {orderSuccess.orderType === 'preorder' ? 'Your preorder is confirmed for the selected date. Our dock team will contact you prior to delivery.' : 'Your fresh catch order is confirmed and assigned for dispatch. Our dock team will contact you prior to delivery.'}
               </p>
             </div>
 
@@ -305,7 +244,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
             {/* LEFT COLUMN: Billing & Shipping */}
             <div className="lg:col-span-7 space-y-6">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-[#1D184D] tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-black text-[#1D184D] tracking-heading">
                   Billing & Shipping
                 </h1>
                 {isSavedAddress && (
@@ -337,7 +276,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-[#1D184D] block mb-1.5">Email address *</label>
+                    <label className="text-xs font-bold text-[#1D184D] block mb-1.5">Email address (optional)</label>
                     <input
                       type="email"
                       name="email"
@@ -364,7 +303,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-[#1D184D] block mb-1.5">Last name *</label>
+                    <label className="text-xs font-bold text-[#1D184D] block mb-1.5">Last name (optional)</label>
                     <input
                       type="text"
                       name="lastName"
@@ -382,13 +321,15 @@ export default function CheckoutPage({ onBackToCatalog }) {
                     <label className="text-xs font-bold text-[#1D184D]">PIN Code *</label>
                     {isCheckingPincode && (
                       <span className="text-[10px] text-[#1D184D]/60 flex items-center gap-1 font-semibold">
-                        <Loader2 className="w-3 h-3 animate-spin text-[#C2542D]" /> Checking DB...
+                        <Loader2 className="w-3 h-3 animate-spin text-[#C2542D]" /> Checking delivery...
                       </span>
                     )}
                   </div>
                   <input
                     type="text"
                     name="pincode"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
                     maxLength={6}
                     value={formData.pincode}
                     onChange={handleChange}
@@ -478,7 +419,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
               
               {/* Order Summary Box */}
               <div className="bg-white/80 backdrop-blur-md p-6 sm:p-7 rounded-3xl border border-[#1D184D]/10 shadow-sm space-y-5">
-                <h2 className="text-2xl font-bold text-[#1D184D] tracking-tight">
+                <h2 className="text-2xl font-bold text-[#1D184D] tracking-heading">
                   Order summary
                 </h2>
 
@@ -506,36 +447,6 @@ export default function CheckoutPage({ onBackToCatalog }) {
                   )}
                 </div>
 
-                {/* Note / Coupon Buttons */}
-                <div className="flex items-center justify-around text-xs font-bold text-[#1D184D]/70 py-1 border-b border-[#1D184D]/10">
-                  <button
-                    type="button"
-                    onClick={() => setShowNoteInput(!showNoteInput)}
-                    className="hover:text-[#C2542D] transition-colors cursor-pointer"
-                  >
-                    📝 Note
-                  </button>
-                  <span className="text-[#1D184D]/20">|</span>
-                  <button
-                    type="button"
-                    onClick={() => {}}
-                    className="hover:text-[#C2542D] transition-colors cursor-pointer"
-                  >
-                    🏷️ Coupon
-                  </button>
-                </div>
-
-                {showNoteInput && (
-                  <textarea
-                    name="orderNote"
-                    rows={2}
-                    value={formData.orderNote}
-                    onChange={handleChange}
-                    placeholder="Special instructions for cutting or delivery..."
-                    className="w-full p-3 bg-[#FAF7EE] border border-[#1D184D]/15 rounded-xl text-xs text-[#1D184D] focus:outline-none resize-none"
-                  />
-                )}
-
                 {/* Pricing Line Items */}
                 <div className="space-y-2.5 text-xs text-[#1D184D]/80">
                   <div className="flex justify-between">
@@ -550,7 +461,6 @@ export default function CheckoutPage({ onBackToCatalog }) {
                     <span>Total</span>
                     <div className="text-right">
                       <span className="text-xl text-[#1D184D]">{deliveryFee === null ? '—' : `₹${totalAmount.toFixed(2)}`}</span>
-                      <span className="block text-[10px] text-[#1D184D]/50 font-normal">(includes ₹{gstAmount} GST)</span>
                     </div>
                   </div>
                 </div>
@@ -568,7 +478,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
 
               {/* Payment Information Section */}
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-[#1D184D] tracking-tight">
+                <h3 className="text-xl font-bold text-[#1D184D] tracking-heading">
                   Payment information
                 </h3>
 

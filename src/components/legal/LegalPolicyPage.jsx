@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { business } from '../../config/business';
 import { ArrowLeft, ShieldCheck, FileText, RefreshCw, Truck } from 'lucide-react';
 
@@ -17,13 +17,13 @@ export default function LegalPolicyPage({ policyType = 'privacy', onBackToCatalo
   const currentPolicy = policies.find((p) => p.id === policyType || p.slug === policyType) || policies[0];
 
   const handleTabClick = (slug) => {
-    window.location.hash = slug;
+    window.location.assign(`#${slug}`);
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#1D184D] font-sans antialiased">
+    <div className="min-h-screen pt-24 bg-white text-[#1D184D] font-sans antialiased">
       {/* Top Header Navigation */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <header className="relative z-10 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
           <button
             onClick={onBackToCatalog}
@@ -68,7 +68,7 @@ export default function LegalPolicyPage({ policyType = 'privacy', onBackToCatalo
         
         {/* Title & Metadata */}
         <div className="border-b border-gray-200 pb-6 mb-8 text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-[#1D184D] uppercase">
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-heading text-[#1D184D] uppercase">
             {currentPolicy.label}
           </h1>
           <p className="text-xs text-gray-500 mt-2 font-mono">

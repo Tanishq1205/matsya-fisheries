@@ -60,3 +60,7 @@ Local verification: `node --test scripts/checkout-request.test.mjs scripts/seo-p
 ## Suggested 30–45 minute handover
 
 Spend 10 minutes on catalog/PIN-code management, 15 minutes on a test order and status updates, 10 minutes on payments/refunds and support, and 5–10 minutes on account access, backups and escalation contacts. The guide is ready; the live training session remains to be held.
+
+## Premium preorders
+
+See [PREORDERS.md](PREORDERS.md) for database setup and operation. Customers order available Premium Sea Fish at the listed prices, choosing a date at least two calendar days ahead (India time), and pay cash or UPI on delivery. The preorder date is shown in the basket, checkout, confirmation, tracking, admin panel and WhatsApp receipt. A future date does not mark payment as received. Razorpay remains future work.

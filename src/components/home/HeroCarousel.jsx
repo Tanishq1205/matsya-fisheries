@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import HeroBanner from './HeroBanner';
+import FishOutline from './FishOutline';
 
 /**
  * Hero carousel: slide 1 is your existing HeroBanner, slides 2 and 3 are the
@@ -14,17 +15,6 @@ const SLIDE_COUNT = 3;
 
 const RED = '#E5262A';
 
-// Fish line-art used as a faint corner decoration (inline SVG, so no image file is needed)
-const FISH_PATH =
-  'M115 383 109 386 102 393 98 402 99 415 102 421 109 428 118 432 133 431 140 427 148 416 149 413 148 398 142 389 132 383 128 382ZM123 403 126 404 128 407 125 411 122 411 120 409 120 405ZM334 99 316 97 283 98 248 103 222 109 193 118 156 133 110 158 76 182 47 207 26 229 6 254 0 263 0 318 23 280 47 249 78 218 120 186 147 170 171 158 192 149 228 137 259 130 288 126 330 126 331 127ZM221 23 220 22 183 30 149 41 129 49 93 66 48 93 30 106 0 131 0 174 28 145 46 130 79 107 105 92 136 77 169 64 195 56 225 50ZM775 276 766 250 758 236 745 218 733 205 714 189 698 178 678 167 681 155 683 138 683 101 679 77 674 60 665 40 656 26 638 3 597 117 570 185 566 192 532 181 484 171 456 168 443 168 442 167 403 167 402 168 369 170 330 177 293 187 247 205 219 219 212 224 210 224 175 247 147 269 113 302 83 339 61 373 41 413 26 454 54 465 94 477 134 485 161 488 176 488 177 489 215 489 268 483 318 471 357 457 395 439 439 412 472 386 503 356 532 321 547 299 567 264 581 231 583 229 711 280 719 282 739 291 775 305 781 306ZM137 319 145 322 165 336 181 352 191 366 200 383 207 403 210 419 210 449 208 459 206 461 164 460 132 456 95 448 66 439 63 437 69 421 93 376 114 346ZM555 219 552 228 536 261 515 295 485 333 449 368 407 399 385 412 357 426 309 444 278 452 242 458 237 457 239 447 238 412 233 389 224 366 211 344 199 329 177 309 160 298 166 291 195 268 216 254 248 236 293 217 343 203 392 196 407 196 408 195 452 196 486 200 507 204 534 211ZM646 69 650 80 654 101 654 139 651 158 644 184 658 189 672 196 698 213 713 226 725 239 737 257 736 259 598 205 594 202 624 127 642 76Z';
-
-function FishOutline({ className = '', style }) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 783 493" aria-hidden="true" focusable="false">
-      <path fill="#EFE8CF" fillRule="evenodd" d={FISH_PATH} />
-    </svg>
-  );
-}
 const NAVY = '#1D184D';
 
 const CSS = `
@@ -51,7 +41,7 @@ const CSS = `
 .hc-doodle.bl { bottom: -1.2vw; left: -2.2vw; width: clamp(100px, 13vw, 280px); }
 
 /* shared type */
-.hc-h { margin: 0; font-weight: 800; letter-spacing: -0.015em; text-transform: uppercase; color: ${NAVY}; line-height: 1.04; }
+.hc-h { margin: 0; font-weight: 800; letter-spacing: var(--matsya-heading-spacing); text-transform: uppercase; color: ${NAVY}; line-height: 1.04; }
 .hc-mr { margin: 0; color: ${NAVY}; font-weight: 500; font-family: 'Sora','Noto Sans Devanagari','Hind',sans-serif; }
 .hc-cta { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 6px 0; cursor: pointer; font: inherit; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; transition: gap .2s, opacity .2s; }
 .hc-cta:hover { gap: 14px; opacity: .85; }

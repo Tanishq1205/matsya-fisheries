@@ -1,24 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ArrowLeft,
-  Search,
-  Filter,
-  Clock,
-  MapPin,
-  Phone,
-  Truck,
-  CheckCircle2,
-  Fish,
-  ShoppingBag,
-  RefreshCw,
-  Lock,
-  Unlock,
-  MessageCircle,
-  AlertCircle,
-  ChevronDown,
-  DollarSign,
-  Loader2,
-} from 'lucide-react';
+import { formatDeliveryDate } from '../../services/preorder';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Search, Clock, ShoppingBag, RefreshCw, Lock, MessageCircle } from 'lucide-react';
 import { adminSupabase as supabase } from '../../lib/supabaseClient';
 import { getWhatsAppReceiptLink } from '../../lib/whatsapp';
 import { requestCaptchaToken } from '../../services/captcha';
@@ -47,6 +29,7 @@ export default function AdminDashboard({ onBackToCatalog }) {
 
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
@@ -94,6 +77,7 @@ const handlePinSubmit = async (e) => {
 
   const fetchOrders = async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -104,6 +88,7 @@ const handlePinSubmit = async (e) => {
       setOrders(data || []);
     } catch (err) {
       console.error('Error fetching admin orders:', err.message);
+      setLoadError('Orders could not be refreshed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -112,16 +97,17 @@ const handlePinSubmit = async (e) => {
   const handleUpdateStatus = async (orderId, newStatus) => {
     setUpdatingOrderId(orderId);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .update({ order_status: newStatus })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select('id, order_status').single();
 
       if (error) throw error;
 
       // Optimistic state update
       setOrders((prev) =>
-        prev.map((ord) => (ord.id === orderId ? { ...ord, order_status: newStatus } : ord))
+        prev.map((ord) => (ord.id === data.id ? { ...ord, order_status: data.order_status } : ord))
       );
     } catch (err) {
       console.error('Failed to update status:', err.message);
@@ -264,6 +250,7 @@ const handlePinSubmit = async (e) => {
           </div>
         </div>
 
+        {loadError && <p role="alert" className="text-sm text-red-700">{loadError}</p>}
         {/* Live Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-[#1D184D]/10 shadow-sm">
@@ -350,9 +337,6 @@ const handlePinSubmit = async (e) => {
                   })
                 : 'Recent';
 
-              const waMessage = encodeURIComponent(
-                `Hello ${order.customer_name}, update on your Matsya order ${orderIdTag}: Current status is "${currentStatus.toUpperCase()}". Thank you!`
-              );
 
               return (
                 <div
@@ -399,6 +383,7 @@ const handlePinSubmit = async (e) => {
 
                     <div>
                       <span className="font-bold text-[#1D184D] block mb-1">Fulfillment Details</span>
+                      {order.order_type === 'preorder' && <p className="font-bold text-[#C2542D]">PREORDER · Delivery {formatDeliveryDate(order.delivery_date)}</p>}
                       <p className="text-[#1D184D]/80 font-semibold">Slot: {order.delivery_slot || 'Morning Catch'}</p>
                       <p className="text-[#1D184D]/80 font-semibold mt-0.5">Payment: {order.payment_method === 'UPI' ? 'Pay via UPI' : 'Cash on Delivery'} ({order.payment_status || 'pending'})</p>
                       {String(order.payment_status || 'pending').toLowerCase() === 'pending' && (

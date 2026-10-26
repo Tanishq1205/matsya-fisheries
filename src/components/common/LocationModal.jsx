@@ -1,154 +1,39 @@
-import React, { useState } from 'react';
-import { MapPin, Navigation, Search, X, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Search, X, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useLocationStore } from '../../store/useLocationStore';
-import { supabase } from '../../lib/supabaseClient';
+import { getDeliveryQuote } from '../../services/deliveryService';
 
 export default function LocationModal() {
   const { isLocationModalOpen, closeLocationModal, location, setLocation } = useLocationStore();
   const [pincodeInput, setPincodeInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null); // { type: 'success' | 'error' | 'info', text: string }
-  const [isDetectingGps, setIsDetectingGps] = useState(false);
 
   if (!isLocationModalOpen) return null;
 
   const verifyAndSavePincode = async (inputPin) => {
-    const cleanPin = inputPin.trim();
-
-    if (!cleanPin || cleanPin.length !== 6 || !/^\d{6}$/.test(cleanPin)) {
-      setStatusMessage({
-        type: 'error',
-        text: 'Please enter a valid 6-digit Mumbai pincode.',
-      });
+    const pin = inputPin.trim();
+    if (!/^\d{6}$/.test(pin)) {
+      setStatusMessage({ type: 'error', text: 'Please enter a valid 6-digit PIN code.' });
       return;
     }
-
     setIsVerifying(true);
-    setStatusMessage({ type: 'info', text: 'Checking database...' });
-
+    setStatusMessage({ type: 'info', text: 'Checking delivery availability...' });
     try {
-      const { data, error } = await supabase
-        .from('pincodes')
-        .select('*')
-        .eq('pincode', cleanPin)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        const areaName = data.area || data.area_name || `Mumbai (${cleanPin})`;
-        const verifiedLocation = {
-          area: areaName,
-          pincode: cleanPin,
-          city: 'Mumbai',
-        };
-        setLocation(verifiedLocation);
-        setStatusMessage({
-          type: 'success',
-          text: `⚡ Express Dock-to-Door delivery available for ${cleanPin}!`,
-        });
-        setTimeout(() => {
-          closeLocationModal();
-          setStatusMessage(null);
-          setPincodeInput('');
-        }, 1200);
-      } else {
-        // Fallback for Mumbai range check
-        const isMumbaiPin = cleanPin.startsWith('400');
-        if (isMumbaiPin) {
-          const verifiedLocation = {
-            area: `Mumbai (${cleanPin})`,
-            pincode: cleanPin,
-            city: 'Mumbai',
-          };
-          setLocation(verifiedLocation);
-          setStatusMessage({
-            type: 'success',
-            text: `⚡ Delivery available across Mumbai (${cleanPin})!`,
-          });
-          setTimeout(() => {
-            closeLocationModal();
-            setStatusMessage(null);
-            setPincodeInput('');
-          }, 1200);
-        } else {
-          setStatusMessage({
-            type: 'error',
-            text: `Sorry, delivery is currently not available for pincode ${cleanPin}.`,
-          });
-        }
+      const quote = await getDeliveryQuote(pin);
+      if (!quote) {
+        setStatusMessage({ type: 'error', text: `Delivery is currently unavailable for ${pin}.` });
+        return;
       }
-    } catch (err) {
-      console.error('Supabase pincode query error:', err);
-      if (cleanPin.startsWith('400')) {
-        const verifiedLocation = {
-          area: `Mumbai (${cleanPin})`,
-          pincode: cleanPin,
-          city: 'Mumbai',
-        };
-        setLocation(verifiedLocation);
-        setStatusMessage({
-          type: 'success',
-          text: `⚡ Serviceable Mumbai area confirmed (${cleanPin})!`,
-        });
-        setTimeout(() => {
-          closeLocationModal();
-          setStatusMessage(null);
-          setPincodeInput('');
-        }, 1200);
-      } else {
-        setStatusMessage({
-          type: 'error',
-          text: 'We currently deliver across Mumbai (400xxx).',
-        });
-      }
+      setLocation({ area: `Mumbai (${pin})`, pincode: pin, city: 'Mumbai' });
+      closeLocationModal();
+      setStatusMessage(null);
+      setPincodeInput('');
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Unable to check delivery availability. Please try again.' });
     } finally {
       setIsVerifying(false);
     }
-  };
-
-  const handleGpsLocation = () => {
-    if (!navigator.geolocation) {
-      setStatusMessage({
-        type: 'error',
-        text: 'Geolocation is not supported by your browser.',
-      });
-      return;
-    }
-
-    setIsDetectingGps(true);
-    setStatusMessage({ type: 'info', text: 'Detecting GPS location...' });
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const detected = {
-          area: 'GPS Location',
-          pincode: location?.pincode || '400089',
-          city: 'Mumbai',
-          lat: latitude,
-          lng: longitude,
-        };
-        setLocation(detected);
-        setIsDetectingGps(false);
-        setStatusMessage({
-          type: 'success',
-          text: '⚡ GPS Location set successfully!',
-        });
-        setTimeout(() => {
-          closeLocationModal();
-          setStatusMessage(null);
-        }, 1000);
-      },
-      (error) => {
-        setIsDetectingGps(false);
-        setStatusMessage({
-          type: 'error',
-          text: 'Could not fetch GPS. Please enter your 6-digit pincode.',
-        });
-      },
-      { timeout: 8000 }
-    );
   };
 
   const handleSubmit = (e) => {
@@ -195,12 +80,12 @@ export default function LocationModal() {
                 Current Location
               </span>
               <p className="text-xs font-bold text-[#FAF7EE] truncate">
-                {location?.area || 'Tilak Nagar, Chembur'} ({location?.pincode || '400089'})
+                {location?.pincode ? `${location.area || 'Delivery area'} (${location.pincode})` : 'Choose your PIN code'}
               </p>
             </div>
           </div>
           <span className="text-[10px] bg-[#6EE7A8]/15 border border-[#6EE7A8]/30 text-[#6EE7A8] px-2.5 py-0.5 rounded-full font-bold shrink-0">
-            Active
+            {location?.pincode ? 'Selected' : 'Not selected'}
           </span>
         </div>
 
@@ -238,16 +123,6 @@ export default function LocationModal() {
           </div>
         </form>
 
-        {/* GPS Location Button */}
-        <button
-          type="button"
-          onClick={handleGpsLocation}
-          disabled={isDetectingGps}
-          className="w-full mt-3 py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-2 text-xs font-bold text-[#D5C582] transition-all cursor-pointer"
-        >
-          <Navigation className={`w-4 h-4 ${isDetectingGps ? 'animate-spin' : ''}`} />
-          <span>{isDetectingGps ? 'Detecting GPS...' : 'Use Current GPS Location'}</span>
-        </button>
 
         {/* Verification Feedback Banner */}
         {statusMessage && (

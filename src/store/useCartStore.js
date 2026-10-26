@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useToastStore } from './useToastStore';
-import { clearCheckoutRequests } from '../services/checkoutRequest';
+import { useToastStore } from './useToastStore.js';
+import { isPreorderProduct, validatePreorderDate } from '../services/preorder.js';
+import { clearCheckoutRequests } from '../services/checkoutRequest.js';
 
 export const useCartStore = create(
   persist(
@@ -20,8 +21,27 @@ export const useCartStore = create(
 
       setDeliverySlot: (slot) => set({ deliverySlot: slot }),
 
-      addItem: (product, weight = '1kg', cut = 'Cleaned & RO Washed') => {
+      addItem: (product, weight = '1kg', cut = 'Cleaned & RO Washed', quantity = 1, schedule = null) => {
         if (!product) return;
+        if (product.in_stock === false || product.is_active === false) {
+          useToastStore.getState().showToast('Product unavailable', 'Please choose another catch.');
+          return;
+        }
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) return;
+        const orderType = schedule ? 'preorder' : 'standard';
+        const deliveryDate = schedule?.deliveryDate || null;
+        if (schedule) {
+          if (!isPreorderProduct(product)) return false;
+          try { validatePreorderDate(deliveryDate, schedule.noticeDays); } catch (error) {
+            useToastStore.getState().showToast('Check preorder date', error.message);
+            return false;
+          }
+        }
+        const basket = get().cart;
+        if (basket.length && ((basket[0].orderType || 'standard') !== orderType || (basket[0].deliveryDate || null) !== deliveryDate)) {
+          useToastStore.getState().showToast('Separate delivery dates', 'Complete or clear your current basket before starting a different delivery.');
+          return false;
+        }
         if (!get().cart.length) {
           // A new basket after a completed/cleared basket is a new purchase.
           // Keep keys through success so queued duplicate submissions still deduplicate.
@@ -57,6 +77,11 @@ export const useCartStore = create(
         const productId = product.productId || product.id;
         const selectedCut = product.cut || product.standard_cut || cut;
         const cartItemId = `${productId}-${is500g ? '500g' : '1000g'}-${selectedCut}`;
+        const existingItem = get().cart.find(item => item.cartItemId === cartItemId);
+        if ((existingItem?.quantity || 0) + quantity > 999) {
+          useToastStore.getState().showToast('Maximum pack quantity reached', 'Please adjust the quantity in your basket.');
+          return;
+        }
 
         set((state) => {
           const currentCart = Array.isArray(state.cart) ? state.cart : [];
@@ -69,7 +94,7 @@ export const useCartStore = create(
             updatedCart[existingIndex] = {
               ...updatedCart[existingIndex],
               price: price || updatedCart[existingIndex].price || 0,
-              quantity: updatedCart[existingIndex].quantity + 1,
+              quantity: updatedCart[existingIndex].quantity + quantity,
             };
             return { cart: updatedCart, isOpen: false };
           }
@@ -80,11 +105,13 @@ export const useCartStore = create(
             productId,
             name: product.name,
             marathiName: product.marathiName || '',
-            image: product.image || '/images/placeholder-fish.jpg',
+            image: product.image || product.image_url || '/images/matsya-logo.png',
             weight: is500g ? '500g' : '1000g',
             cut: selectedCut,
             price: price || 0,
-            quantity: 1,
+            quantity,
+            orderType,
+            deliveryDate,
           };
 
           return { cart: [...currentCart, newItem], isOpen: false };
@@ -96,18 +123,20 @@ export const useCartStore = create(
         if (useToastStore.getState()?.showToast) {
           useToastStore.getState().showToast(
             `${product.name}${marathiText}`,
-            `${weightLabel} • ₹${price}`
+            `${quantity} x ${weightLabel} \u2022 \u20b9${price * quantity}`
           );
         }
+        return true;
       },
 
       updateQuantity: (cartItemId, delta) => {
+        if (!Number.isInteger(delta)) return;
         set((state) => {
           const currentCart = Array.isArray(state.cart) ? state.cart : [];
           const updatedCart = currentCart
             .map((item) => {
               if (item.cartItemId === cartItemId) {
-                const newQty = item.quantity + delta;
+                const newQty = Math.min(999, item.quantity + delta);
                 return newQty > 0 ? { ...item, quantity: newQty } : null;
               }
               return item;

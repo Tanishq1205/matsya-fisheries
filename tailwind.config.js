@@ -20,6 +20,7 @@ export default {
         sans: ['Satoshi', 'Inter', 'system-ui', 'sans-serif'],
       },
       letterSpacing: {
+        heading: 'var(--matsya-heading-spacing)',
         'widest-editorial': '0.28em',
       }
     },

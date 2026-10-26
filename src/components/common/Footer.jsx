@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { business } from '../../config/business';
 import {
   MapPin,
@@ -17,6 +17,10 @@ const BULK_INQUIRY_TEXT = encodeURIComponent(
   'Hello Matsya Fisheries, I would like to inquire about bulk / wholesale seafood supply for my business.'
 );
 const WHATSAPP_BULK_URL = `https://wa.me/${MATSYA_WHATSAPP_NUMBER}?text=${BULK_INQUIRY_TEXT}`;
+const RESELL_INQUIRY_TEXT = encodeURIComponent(
+  'Hello Matsya Fisheries, I am interested in the opportunity to resell your seafood products. Could you please share details about becoming a reselling partner, including pricing, minimum order quantities, and delivery arrangements?'
+);
+const WHATSAPP_RESELL_URL = `https://wa.me/${MATSYA_WHATSAPP_NUMBER}?text=${RESELL_INQUIRY_TEXT}`;
 
 export default function Footer({
   logoSrc = '/images/matsya-logo-navbar.png',
@@ -163,6 +167,17 @@ export default function Footer({
                 className="hover:text-[#D5C582] transition-colors inline-flex items-center gap-1"
               >
                 <span>Bulk & Restaurant Supply</span>
+                <ArrowUpRight className="w-3 h-3 opacity-60" />
+              </a>
+            </li>
+            <li>
+              <a
+                href={WHATSAPP_RESELL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#D5C582] transition-colors inline-flex items-center gap-1"
+              >
+                <span>Resell with Us</span>
                 <ArrowUpRight className="w-3 h-3 opacity-60" />
               </a>
             </li>

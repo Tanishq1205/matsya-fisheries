@@ -1,14 +1,7 @@
-import React from 'react';
+
+import { formatDeliveryDate } from '../../services/preorder';
 import { useCartStore } from '../../store/useCartStore';
-import {
-  X,
-  Trash2,
-  Plus,
-  Minus,
-  ShoppingBag,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Clock } from 'lucide-react';
 
 export default function CartDrawer({ onOpenCheckout }) {
   const isOpen = useCartStore((state) => state.isOpen);
@@ -74,6 +67,7 @@ export default function CartDrawer({ onOpenCheckout }) {
             </div>
           </div>
 
+{cart[0]?.orderType === 'preorder' && <p className="px-5 pt-4 text-sm font-bold text-[#D5C582]">Preorder · Delivery {formatDeliveryDate(cart[0].deliveryDate)} · Pay on delivery</p>}
 <p className="px-5 pt-4 text-xs text-white/70">Delivery charges are calculated at checkout using your delivery PIN code.</p>
           <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
             

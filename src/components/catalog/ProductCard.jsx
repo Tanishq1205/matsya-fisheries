@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useCartStore } from '../../store/useCartStore';
 
 export default function ProductCard({ product }) {
@@ -22,7 +22,7 @@ export default function ProductCard({ product }) {
             </p>
           </div>
           <span className="text-[11px] bg-[#1D184D]/5 text-[#1D184D]/80 px-2.5 py-1 rounded-full font-medium">
-            {product.servingEstimate || '2-3 Servings'}
+            {selectedWeight === '500g' ? '500g' : '1kg'}
           </span>
         </div>
 

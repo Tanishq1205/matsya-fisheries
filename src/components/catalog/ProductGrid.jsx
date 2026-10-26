@@ -1,56 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, Search, X, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { getAllProducts } from '../../services/productService';
+import PremiumPreorder from './PremiumPreorder';
 import SectionDivider from '../common/SectionDivider';
 
-/**
- * Format database product row into standard payload for Product Details Modal
- */
-export const formatForDetailsPage = (item) => {
-  const defaultImage = item.image_url || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=800&auto=format&fit=crop&q=80';
-  const galleryImages = item.gallery_urls && Array.isArray(item.gallery_urls) && item.gallery_urls.length > 0
-    ? item.gallery_urls
-    : [defaultImage];
-
-  return {
-    id: item.id,
-    name: item.name,
-    category: item.category,
-    marathiName: item.marathi_name || '',
-    localName: item.marathi_name ? `(${item.marathi_name})` : '',
-    subtitle: item.subtitle || '',
-    badgeText: item.badge_text || '100% DOCK FRESH',
-    landingOrigin: item.landing_origin || 'Cleaned & RO Washed',
-    price_500g: item.price_500g,
-    price_1kg: item.price_1kg,
-    mrp_500g: item.mrp_500g,
-    mrp_1kg: item.mrp_1kg,
-    discountPercent: item.discount_percent || 20,
-    images: [defaultImage, ...galleryImages.filter(img => img !== defaultImage)],
-    cuts: item.cut_options_detail && Array.isArray(item.cut_options_detail) && item.cut_options_detail.length > 0
-      ? item.cut_options_detail
-      : [
-          {
-            name: item.standard_cut || 'Cleaned & RO Washed',
-            description: 'Gutted, descaled, washed in pure RO water and ready to cook.',
-            yield: '~80% Yield'
-          }
-        ],
-    weightPacks: item.price_500g ? [
-      { gross: 500, label: item.servings_500g || '500g Pack (Serves 2–3)', netWeight: item.net_weight_500g || '~350g Net' },
-      { gross: 1000, label: item.servings_1kg || '1kg Pack (Serves 4–6)', netWeight: item.net_weight_1kg || '~700g Net' },
-    ] : [
-      { gross: 1000, label: item.servings_1kg || '1kg Pack (Serves 4–6)', netWeight: item.net_weight_1kg || '~700g Net' },
-    ],
-    healthBenefits: item.nutritional_benefits && Array.isArray(item.nutritional_benefits) && item.nutritional_benefits.length > 0
-      ? item.nutritional_benefits
-      : [
-          { title: 'Pure Protein', value: '20g / 100g', description: 'Promotes muscle repair and daily metabolic energy.' },
-          { title: 'Rich in Omega-3', value: '1.2g EPA/DHA', description: 'Supports arterial health and lowers inflammation.' }
-        ],
-  };
-};
+import { formatForDetailsPage } from '../../services/productPresentation';
 
 function ProductCard({ product, onSelectProduct }) {
   const [weight, setWeight] = useState(product.price_500g ? '500g' : '1kg');
@@ -99,7 +54,7 @@ function ProductCard({ product, onSelectProduct }) {
         </div>
 
         <div className="flex items-baseline gap-2">
-          <h3 className="text-xl font-bold text-[#FAF7EE] tracking-tight font-['Sora',sans-serif] group-hover:text-[#D5C582] transition-colors">
+          <h3 className="text-xl font-bold text-[#FAF7EE] tracking-heading font-['Sora',sans-serif] group-hover:text-[#D5C582] transition-colors">
             {product.name}
           </h3>
           {product.marathi_name && (
@@ -237,7 +192,7 @@ export default function ProductGrid({ onSelectProduct, category = 'ALL', onCateg
           Daily Harbor Catch
         </span>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold tracking-tight text-[#1D184D] leading-tight font-['Sora',sans-serif]">
+          <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold tracking-heading text-[#1D184D] leading-tight font-['Sora',sans-serif]">
             All Fresh Catches.{' '}
             <span className="text-[#1D184D]/50 font-normal block sm:inline sm:ml-2">
               Cleaned, cut, and packed to order.
@@ -296,6 +251,9 @@ export default function ProductGrid({ onSelectProduct, category = 'ALL', onCateg
         </div>
       </div>
 
+      {selectedCategory === 'Premium Sea Fish' && (
+        <div className="max-w-[1560px] mx-auto px-6 sm:px-12 mb-8"><PremiumPreorder products={products} /></div>
+      )}
       <div className="max-w-[1560px] mx-auto px-6 sm:px-12">
         {isLoading ? (
           <div className="w-full py-24 flex flex-col items-center justify-center gap-3">

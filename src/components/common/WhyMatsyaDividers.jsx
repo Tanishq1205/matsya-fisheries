@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Anchor } from 'lucide-react';
 
 /**
@@ -56,7 +56,7 @@ function rand01(seed) {
 function useDivider() {
   const ref = useRef(null);
   const [width, setWidth] = useState(0);
-  const [played, setPlayed] = useState(false);
+  const [played, setPlayed] = useState(() => typeof IntersectionObserver === 'undefined');
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -72,10 +72,6 @@ function useDivider() {
   useEffect(() => {
     const el = ref.current;
     if (!el || played) return undefined;
-    if (typeof IntersectionObserver === 'undefined') {
-      setPlayed(true);
-      return undefined;
-    }
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShieldCheck, RefreshCw, Fish, MapPin, Anchor } from 'lucide-react';
+
+import { ShieldCheck, RefreshCw, Fish, MapPin } from 'lucide-react';
 import { ScaleEdgeDivider } from '../common/WhyMatsyaDividers'
 
 const FEATURES = [
@@ -47,7 +47,7 @@ export default function WhyMatsya() {
           <span className="text-xs font-black tracking-[0.28em] text-[#D5C582] uppercase block mb-3 font-['Sora',sans-serif]">
             WHY MATSYA?
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#FAF7EE] font-['Sora',sans-serif] leading-tight">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-heading text-[#FAF7EE] font-['Sora',sans-serif] leading-tight">
             Built from real customers.{' '}
             <span className="text-white/40 font-normal block sm:inline">
               Real demand. Real daily operations.

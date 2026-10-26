@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Lenis from 'lenis';
 
 import LogoPreloader from './components/common/LogoPreloader';
@@ -21,28 +21,29 @@ import LegalPolicyPage from './components/legal/LegalPolicyPage';
 import PageMetadata from './components/common/PageMetadata';
 import CaptchaDialog from './components/common/CaptchaDialog';
 import { getProductById } from './services/productService';
-import { formatForDetailsPage } from './components/catalog/ProductGrid';
+import { formatForDetailsPage } from './services/productPresentation';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Default strictly to Home Catalog view on initial load / reload
-  const [isTrackOpen, setIsTrackOpen] = useState(false);
+  const [isTrackOpen, setIsTrackOpen] = useState(() => window.location.hash === '#track');
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [legalPolicy, setLegalPolicy] = useState(null);
+  const [legalPolicy, setLegalPolicy] = useState(() => ['#privacy-policy', '#terms', '#refund-policy', '#shipping-policy'].includes(window.location.hash) ? window.location.hash.slice(1) : null);
 
   const isCheckoutOpen = useCartStore((state) => state.isCheckoutOpen);
   const closeCheckout = useCartStore((state) => state.closeCheckout);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [category, setCategory] = useState(new URLSearchParams(window.location.search).get('category') || 'ALL');
+  const [productError, setProductError] = useState('');
+  const productRequest = useRef(0);
+  const [category, setCategory] = useState(() => window.location.hash === '#admin' ? 'ALL' : new URLSearchParams(window.location.search).get('category') || 'ALL');
   const lenisRef = useRef(null);
 
   const savedScrollRef = useRef(0);
   const returnToTopRef = useRef(false);
-  const prevCheckoutOpenRef = useRef(isCheckoutOpen);
 
-  const handleOpenAdmin = () => {
+  const handleOpenAdmin = useCallback(() => {
     setIsAdminOpen(true);
     setIsTrackOpen(false);
     setLegalPolicy(null);
@@ -50,7 +51,7 @@ export default function App() {
     if (window.location.hash !== '#admin') {
       window.location.hash = 'admin';
     }
-  };
+  }, [closeCheckout]);
 
   const handleCloseAdmin = () => {
     setIsAdminOpen(false);
@@ -65,21 +66,21 @@ export default function App() {
 
   // Preserve customer links, but always leave the admin view on reload.
   useEffect(() => {
-    closeCheckout();
     const hash = window.location.hash;
-    setIsAdminOpen(false);
+    if (hash === '#checkout' && useCartStore.getState().cart.length) useCartStore.getState().openCheckout();
+    else closeCheckout();
     if (hash === '#admin') {
       window.history.replaceState(null, '', window.location.pathname);
-      setSelectedProduct(null);
-      setCategory('ALL');
-      setIsTrackOpen(false);
-      setLegalPolicy(null);
       return;
     }
-    setIsTrackOpen(hash === '#track');
-    if (['#privacy-policy', '#terms', '#refund-policy', '#shipping-policy'].includes(hash)) setLegalPolicy(hash.slice(1));
     const id = new URLSearchParams(window.location.search).get('product');
-    if (id) getProductById(id).then(({ data }) => { if (data) setSelectedProduct(formatForDetailsPage(data)); });
+    const request = ++productRequest.current;
+    if (id) getProductById(id).then(({ data }) => {
+      if (request !== productRequest.current) return;
+      if (data) setSelectedProduct(formatForDetailsPage(data));
+      else setProductError('This product could not be loaded. Please choose a product from the catalog.');
+    });
+    return () => { productRequest.current += 1; };
   }, [closeCheckout]);
 
   // Active Session Hash Listener (#admin, #track, #privacy-policy, etc.) & Shortcut Key (Ctrl+Shift+A)
@@ -101,10 +102,24 @@ export default function App() {
         setIsAdminOpen(false);
         setIsTrackOpen(false);
         closeCheckout();
-      } else if (!hash) {
+      } else if (hash === '#checkout') {
         setIsAdminOpen(false);
         setIsTrackOpen(false);
         setLegalPolicy(null);
+        if (useCartStore.getState().cart.length) useCartStore.getState().openCheckout();
+      } else {
+        setIsAdminOpen(false);
+        setIsTrackOpen(false);
+        setLegalPolicy(null);
+        closeCheckout();
+        if (hash === '#all-products' || hash === '#story') {
+          productRequest.current += 1;
+          setSelectedProduct(null);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('product');
+          window.history.replaceState(null, '', url);
+          setTimeout(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' }), 50);
+        }
       }
     };
 
@@ -126,20 +141,19 @@ export default function App() {
       window.removeEventListener('hashchange', syncHashState);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [closeCheckout, isAdminOpen]);
+  }, [closeCheckout, isAdminOpen, handleOpenAdmin]);
 
-  // Sync Checkout view with Browser History API
-  useEffect(() => {
-    if (isCheckoutOpen && !prevCheckoutOpenRef.current) {
-      if (window.history.state?.view !== 'checkout') {
-        window.history.pushState(
-          { view: 'checkout', product: selectedProduct },
-          ''
-        );
+  // React to checkout actions, keeping browser history in step with the store.
+  useEffect(() => useCartStore.subscribe((state, previous) => {
+    if (state.isCheckoutOpen && !previous.isCheckoutOpen) {
+      setIsTrackOpen(false);
+      setIsAdminOpen(false);
+      setLegalPolicy(null);
+      if (window.location.hash !== '#checkout') {
+        window.history.pushState({ view: 'checkout', product: selectedProduct }, '', '#checkout');
       }
     }
-    prevCheckoutOpenRef.current = isCheckoutOpen;
-  }, [isCheckoutOpen, selectedProduct]);
+  }), [selectedProduct]);
 
   // Smooth scrolling (Lenis) setup
   useEffect(() => {
@@ -156,12 +170,13 @@ export default function App() {
     lenisRef.current = lenis;
     lenis.stop();
 
+    let rafId;
     function raf(time) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
 
-    const rafId = requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
     return () => {
       cancelAnimationFrame(rafId);
@@ -174,7 +189,7 @@ export default function App() {
     const onPopState = (e) => {
       const state = e.state;
 
-      if (state?.view === 'checkout') {
+      if (window.location.hash === '#checkout' && useCartStore.getState().cart.length) {
         useCartStore.getState().openCheckout();
         setIsTrackOpen(false);
         setIsAdminOpen(false);
@@ -196,21 +211,20 @@ export default function App() {
         useCartStore.getState().closeCheckout();
       } else {
         useCartStore.getState().closeCheckout();
-        if (window.location.hash) {
-          window.history.replaceState(
-            null,
-            '',
-            window.location.pathname + window.location.search
-          );
-          setIsAdminOpen(false);
-          setIsTrackOpen(false);
-          setLegalPolicy(null);
-        }
+        setIsAdminOpen(false);
+        setIsTrackOpen(false);
+        setLegalPolicy(null);
       }
 
       setCategory(new URLSearchParams(window.location.search).get('category') || 'ALL');
       const id = new URLSearchParams(window.location.search).get('product');
-      if (id && !state?.product) getProductById(id).then(({ data }) => setSelectedProduct(data ? formatForDetailsPage(data) : null));
+      const request = ++productRequest.current;
+      setProductError('');
+      if (id && !state?.product) getProductById(id).then(({ data }) => {
+        if (request !== productRequest.current) return;
+        setSelectedProduct(data ? formatForDetailsPage(data) : null);
+        if (!data) setProductError('This product could not be loaded. Please choose a product from the catalog.');
+      });
       else setSelectedProduct(state?.product ?? null);
     };
 
@@ -275,6 +289,8 @@ export default function App() {
   };
 
   const handleSelectProduct = (productData) => {
+    productRequest.current += 1;
+    setProductError('');
     const url = new URL(window.location.href);
     url.hash = '';
     url.searchParams.delete('category');
@@ -284,12 +300,14 @@ export default function App() {
       savedScrollRef.current = currentY;
       window.history.pushState({ view: 'product', product: productData }, '', url);
     } else {
-      window.history.replaceState({ view: 'product', product: productData }, '');
+      window.history.replaceState({ view: 'product', product: productData }, '', url);
     }
     setSelectedProduct(productData);
   };
 
   const closeProduct = () => {
+    productRequest.current += 1;
+    setProductError('');
     setSelectedProduct(null);
     if (window.history.state?.view === 'product' || new URLSearchParams(window.location.search).has('product')) {
       const url = new URL(window.location.href);
@@ -304,6 +322,10 @@ export default function App() {
   };
 
   const handleLogoClick = () => {
+    productRequest.current += 1;
+    setProductError('');
+    setCategory('ALL');
+    window.history.replaceState(null, '', window.location.pathname);
     if (isCheckoutOpen) {
       closeCheckout();
     }
@@ -341,6 +363,7 @@ export default function App() {
       <LocationModal />
 
       <main className="relative w-full min-h-screen">
+        {productError && <p role="alert" className="pt-24 px-6 text-center text-[#C2542D]">{productError}</p>}
         {isAdminOpen ? (
           <AdminDashboard key="admin-session" onBackToCatalog={handleCloseAdmin} />
         ) : isTrackOpen ? (
@@ -354,7 +377,7 @@ export default function App() {
             }}
           />
         ) : isCheckoutOpen ? (
-          <CheckoutPage onBackToCatalog={() => setSelectedProduct(null)} />
+          <CheckoutPage onBackToCatalog={handleLogoClick} />
         ) : (
           <>
             {/* Main Home Page Container */}
@@ -374,6 +397,7 @@ export default function App() {
             {/* Product Details View */}
             {selectedProduct && (
               <ProductDetailsPage
+                key={selectedProduct.id}
                 key={selectedProduct.id || selectedProduct.name}
                 product={selectedProduct}
                 onBack={handleBackToCatalog}

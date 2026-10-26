@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Quote, ShieldCheck, MapPin, Anchor, Award } from 'lucide-react';
 import { ScaleEdgeBottomDivider } from '../common/WhyMatsyaDividers';
 
 const FOUNDER = {
   name: 'Omkar Gaikwad',
   role: 'FOUNDER & OWNER, MATSYA FISHERIES',
-  photo: '/images/founder.jpg',
+  photo: null,
 };
 
 const STATS = [
@@ -16,7 +16,7 @@ const STATS = [
 ];
 
 export default function TeamStorySection() {
-  const [photoFailed, setPhotoFailed] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(!FOUNDER.photo);
 
   return (
     <section id="story" className="relative w-full bg-[#FAF7EE] select-none">
@@ -73,7 +73,7 @@ export default function TeamStorySection() {
               <div className="absolute left-4 right-4 bottom-4 z-20 bg-[#1D184D] border-2 border-[#D5C582] rounded-2xl p-5 shadow-2xl">
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-xl font-black text-[#FAF7EE] tracking-tight font-['Sora',sans-serif]">
+                    <p className="text-xl font-black text-[#FAF7EE] tracking-heading font-['Sora',sans-serif]">
                       {FOUNDER.name}
                     </p>
                     <p className="text-[11px] font-extrabold tracking-[0.18em] uppercase text-[#D5C582] mt-1">
@@ -88,7 +88,7 @@ export default function TeamStorySection() {
           {/* Right: High-Contrast Content */}
           <div className="lg:col-span-7 flex flex-col justify-center">
             
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#1D184D] leading-[1.15] font-['Sora',sans-serif]">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-heading text-[#1D184D] leading-[1.15] font-['Sora',sans-serif]">
               Born in Mumbai.{' '}
               <span className="text-[#1D184D]/60 font-bold block sm:inline">
                 Built on trust.

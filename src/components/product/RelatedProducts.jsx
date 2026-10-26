@@ -1,8 +1,8 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Truck, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { getAllProducts } from '../../services/productService';
-import { formatForDetailsPage } from '../catalog/ProductGrid';
+import { formatForDetailsPage } from '../../services/productPresentation';
 
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=500&auto=format&fit=crop&q=60';
@@ -75,8 +75,6 @@ export default function RelatedProducts({ currentProduct, onSelectProduct }) {
 
     // Scroll window to top
     window.scrollTo(0, 0);
-    document.body.scrollTop = 0;
-    document.documentElement.scrollTop = 0;
   };
 
   const arrowClass =
@@ -116,7 +114,7 @@ export default function RelatedProducts({ currentProduct, onSelectProduct }) {
           marginBottom: 20,
         }}
       >
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1D184D] leading-tight">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-heading text-[#1D184D] leading-tight">
           You may also like.{' '}
           <span className="text-[#1D184D]/50 font-normal block sm:inline">
             Fresh picks for your table.
@@ -219,7 +217,7 @@ export default function RelatedProducts({ currentProduct, onSelectProduct }) {
                 {/* Details */}
                 <div style={{ padding: '10px 4px 4px' }}>
                   <h3
-                    className="font-bold tracking-tight group-hover:text-[#D5C582] transition-colors"
+                    className="font-bold tracking-heading group-hover:text-[#D5C582] transition-colors"
                     style={{
                       color: '#FAF7EE',
                       fontSize: 15,
@@ -248,9 +246,6 @@ export default function RelatedProducts({ currentProduct, onSelectProduct }) {
                     }}
                   >
                     <span>{has500 ? '500 g' : '1 kg'}</span>
-                    <span style={{ borderLeft: '1px solid rgba(194,84,45,0.6)', paddingLeft: 8 }}>
-                      Serves {has500 ? '2–3' : '4–6'}
-                    </span>
                   </div>
 
                   <div

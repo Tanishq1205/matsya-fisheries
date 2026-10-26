@@ -4,6 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --matsya-heading-spacing: 0.01em;
+  }
+
+  body {
+    letter-spacing: 0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: var(--matsya-heading-spacing);
+  }
+
+  input, textarea, select {
+    letter-spacing: normal;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --matsya-heading-spacing: 0.015em;
+    }
+
+    body {
+      letter-spacing: 0.015em;
+    }
+  }
+}
+
 /* 1. Lenis Smooth Scroll Standard Resets */
 
 html {

@@ -20,7 +20,8 @@ export async function ensureCustomerSession() {
 
 export async function placeOrder(payload) {
   const session = await ensureCustomerSession();
-  const { created_at: _createdAt, ...order } = payload;
+  const order = { ...payload };
+  delete order.created_at;
   const fingerprint = await checkoutFingerprint(session.user.id, order);
   const submit = async () => {
     const requestId = getCheckoutRequest(fingerprint);

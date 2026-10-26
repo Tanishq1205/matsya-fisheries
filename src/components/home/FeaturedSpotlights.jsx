@@ -1,8 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import gsap from 'gsap';
 import { getAllProducts } from '../../services/productService';
-import { formatForDetailsPage } from '../catalog/ProductGrid';
+import { formatForDetailsPage } from '../../services/productPresentation';
 import SectionDivider from '../common/SectionDivider';
 
 const FEATURED_ITEMS = [
@@ -172,7 +172,7 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
         <span className="text-[11px] font-bold tracking-[0.28em] uppercase text-[#C2542D] block mb-2 font-['Sora',sans-serif]">
           Daily Selection
         </span>
-        <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold tracking-tight text-[#1D184D] leading-tight font-['Sora',sans-serif]">
+        <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold tracking-heading text-[#1D184D] leading-tight font-['Sora',sans-serif]">
           Signature Catches.{' '}
           <span className="text-[#1D184D]/50 font-normal block sm:inline sm:ml-2">
             Our Classics

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { formatDeliveryDate } from '../../services/preorder';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft,
   Search,
@@ -13,7 +14,8 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { ensureCustomerSession } from '../../services/orderService';
+
+import { readCustomerDetails } from '../../services/customerDetails';
 
 const TRACKING_STEPS = [
   {
@@ -42,83 +44,57 @@ const TRACKING_STEPS = [
   },
 ];
 
+async function lookupOrders(query) {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const session = sessionData.session;
+  if (!session) throw new Error('Open tracking in the same browser used to place your order, or contact us on WhatsApp for help.');
+  const cleanInput = query.replace(/^#?MATSYA-/i, '').trim();
+  let request = supabase.from('orders').select('*').eq('customer_id', session.user.id);
+  if (/^\d{10}$/.test(query)) request = request.eq('customer_phone', query);
+  else if (/^\d+$/.test(cleanInput)) request = request.eq('order_number', parseInt(cleanInput, 10));
+  else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanInput)) request = request.eq('id', cleanInput);
+  else throw new Error('Enter your order number or phone number.');
+  const { data, error } = await request.order('created_at', { ascending: false });
+  if (error) throw new Error('Unable to load orders. Please try again.');
+  if (!data?.length) throw new Error(`No orders found matching "${query}".`);
+  return data;
+}
+
 export default function OrderTrackingPage({ onBackToCatalog }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [initialQuery] = useState(() => readCustomerDetails().phone || '');
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const requestRef = useRef(0);
+  const [isLoading, setIsLoading] = useState(!!initialQuery);
   const [orders, setOrders] = useState([]);
-  const [hasSearched, setHasSearched] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Auto-search if customer details exist in localStorage or if an order ID was just placed
-  useEffect(() => {
-    const savedCustomer = localStorage.getItem('matsya_customer_details');
-    if (savedCustomer) {
-      try {
-        const parsed = JSON.parse(savedCustomer);
-        if (parsed.phone) {
-          setSearchQuery(parsed.phone);
-          fetchOrders(parsed.phone);
-        }
-      } catch (e) {
-        console.error('Error reading saved customer details:', e);
-      }
-    }
+  const fetchOrders = useCallback((query) => {
+    const request = ++requestRef.current;
+    lookupOrders(query.trim()).then(data => {
+      if (request === requestRef.current) setOrders(data);
+    }).catch(error => {
+      if (request === requestRef.current) setErrorMessage(error.message || 'Unable to load orders. Please try again.');
+    }).finally(() => {
+      if (request === requestRef.current) setIsLoading(false);
+    });
   }, []);
 
-  const fetchOrders = async (queryToSearch) => {
-  const query = (queryToSearch || searchQuery).trim();
-  if (!query) {
-    setErrorMessage('Please enter an Order ID or 10-digit Phone Number.');
-    return;
-  }
-
-  setIsLoading(true);
-  setErrorMessage('');
-  setHasSearched(true);
-  setOrders([]);
-
-  try {
-    const session = await ensureCustomerSession();
-    const cleanInput = query.replace('#MATSYA-', '').trim();
-    const isPhone = /^\d{10}$/.test(query.replace(/\D/g, ''));
-
-    let supabaseQuery = supabase.from('orders').select('*').eq('customer_id', session.user.id);
-
-    if (isPhone) {
-      // Query by customer_phone column
-      supabaseQuery = supabaseQuery.eq('customer_phone', query.replace(/\D/g, ''));
-    } else if (!isNaN(cleanInput)) {
-      // Query by order_number integer column
-      supabaseQuery = supabaseQuery.eq('order_number', parseInt(cleanInput, 10));
-    } else {
-      // Query by UUID or phone fallback
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanInput)) {
-        setErrorMessage('Enter your order number or phone number.'); return;
-      }
-      supabaseQuery = supabaseQuery.eq('id', cleanInput);
-    }
-
-    const { data, error } = await supabaseQuery.order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('Order search query error:', error.message);
-      setErrorMessage('Unable to find order details. Please check your Order ID or phone number.');
-    } else if (!data || data.length === 0) {
-      setErrorMessage(`No orders found matching "${query}".`);
-    } else {
-      setOrders(data);
-    }
-  } catch (err) {
-    console.error('Error fetching tracking data:', err);
-    setErrorMessage('Network error while searching for order. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  useEffect(() => {
+    if (initialQuery) fetchOrders(initialQuery);
+    return () => { requestRef.current += 1; };
+  }, [initialQuery, fetchOrders]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchOrders();
+    if (!searchQuery.trim()) {
+      setErrorMessage('Please enter an Order ID or 10-digit Phone Number.');
+      return;
+    }
+    setIsLoading(true);
+    setErrorMessage('');
+    setOrders([]);
+    fetchOrders(searchQuery);
   };
 
   const getStepStatus = (currentStatus, stepKey, stepIndex) => {
@@ -311,6 +287,7 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
             <Truck className="w-3.5 h-3.5 text-[#C2542D]" /> Delivery Slot
           </span>
           <p className="text-[#1D184D]/80 font-semibold">
+            {order.order_type === 'preorder' && <span className="block font-bold text-[#C2542D]">Preorder · {formatDeliveryDate(order.delivery_date)}</span>}
             {order.delivery_slot || 'Morning Catch (7:00 AM – 10:00 AM)'}
           </p>
         </div>
@@ -327,7 +304,7 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
             <div key={item.cartItemId || i} className="py-3 flex items-center justify-between text-xs">
               <div className="flex items-center gap-3">
                 <img
-                  src={item.image || '/images/placeholder-fish.jpg'}
+                  src={item.image || '/images/matsya-logo.png'}
                   alt={item.name}
                   className="w-10 h-10 object-cover rounded-xl border border-[#1D184D]/10 bg-[#FAF7EE]"
                 />

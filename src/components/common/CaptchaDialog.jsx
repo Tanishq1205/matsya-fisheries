@@ -7,14 +7,14 @@ function Challenge({ request }) {
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    dialog.current.showModal();
-    return () => { dialog.current?.close(); };
+    const node = dialog.current;
+    node.showModal();
+    return () => { node.close(); };
   }, []);
   useEffect(() => {
     let cancelled = false;
     let api;
     let widget;
-    setError('');
     loadTurnstile().then(turnstile => {
       if (cancelled) return;
       api = turnstile;
@@ -37,7 +37,7 @@ function Challenge({ request }) {
       <div ref={container} className="min-h-16" />
       {error && <p role="alert" className="text-sm text-red-700 mt-3">{error}</p>}
       <div className="flex gap-4 mt-4">
-        {error && <button type="button" className="underline text-sm" onClick={() => setAttempt(value => value + 1)}>Retry verification</button>}
+        {error && <button type="button" className="underline text-sm" onClick={() => { setError(''); setAttempt(value => value + 1); }}>Retry verification</button>}
         <button type="button" className="underline text-sm" onClick={cancel}>Cancel</button>
       </div>
     </dialog>

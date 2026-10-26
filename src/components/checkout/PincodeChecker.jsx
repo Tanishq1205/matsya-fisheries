@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MapPin, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 

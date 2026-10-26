@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import FishOutline from './FishOutline';
 
 export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = false }) {
   const containerRef = useRef(null);
@@ -39,7 +40,7 @@ export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = fal
     if (onExploreCatalog) {
       onExploreCatalog();
     } else {
-      document.getElementById('featured-products')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -48,45 +49,29 @@ export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = fal
       ref={containerRef}
       className="relative w-full h-screen min-h-[680px] bg-[#FAF7EE] flex flex-col justify-between items-center overflow-hidden pt-20 pb-16 select-none"
     >
-      {/* Top Left Line Art Doodle */}
-      <div className="absolute top-10 left-8 pointer-events-none opacity-30 w-24 sm:w-36 z-0">
-        <svg viewBox="0 0 100 80" fill="none" stroke="#D5C582" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M10 40 C 35 10, 65 70, 85 40 C 65 10, 35 70, 10 40 Z" />
-          <path d="M85 40 L 95 30 M 85 40 L 95 50" />
-          <path d="M5 25 C 0 20, 0 15, 5 10" />
-          <path d="M12 20 C 8 16, 8 12, 12 8" />
-        </svg>
-      </div>
-
-      {/* Bottom Right Line Art Doodle */}
-      <div className="absolute bottom-24 right-8 pointer-events-none opacity-30 w-28 sm:w-40 z-0">
-        <svg viewBox="0 0 100 80" fill="none" stroke="#D5C582" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M10 40 C 35 10, 65 70, 85 40 C 65 10, 35 70, 10 40 Z" />
-          <path d="M85 40 L 95 30 M 85 40 L 95 50" />
-          <path d="M5 25 C 0 20, 0 15, 5 10" />
-          <path d="M12 20 C 8 16, 8 12, 12 8" />
-        </svg>
-      </div>
+      {/* Shared background artwork used across the hero slides */}
+      <FishOutline className="absolute top-10 left-8 pointer-events-none w-24 sm:w-36 h-auto z-0" />
+      <FishOutline className="absolute bottom-24 right-8 pointer-events-none w-28 sm:w-40 h-auto z-0" />
 
       {/* Vertically Centered Content Container */}
       <div className="relative z-10 max-w-[1600px] w-full px-4 flex flex-col items-center text-center my-auto">
         
         {/* 1. TOP HEADLINE */}
         <div ref={topTextRef} className="z-10 opacity-0">
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[88px] font-black tracking-tight text-[#1D184D] uppercase font-['Sora',sans-serif] leading-[0.9] max-w-5xl mx-auto">
+          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[88px] font-black tracking-heading text-[#1D184D] uppercase font-['Sora',sans-serif] leading-[0.9] max-w-5xl mx-auto">
             WHERE EVERY <br /> CATCH BEGINS
           </h1>
         </div>
 
-        {/* 2. OVERLAPPING FISH IMAGE (SCALED UP) */}
+        {/* 2. FISH IMAGE WITH SPACE FOR THE HEADLINE AND CTA */}
         <div
           ref={fishRef}
-          className="w-full max-w-[880px] sm:max-w-[1100px] md:max-w-[1280px] lg:max-w-[1400px] -mt-12 sm:-mt-22 md:-mt-28 lg:-mt-32 z-20 pointer-events-none opacity-0"
+          className="w-[117%] max-w-[min(1378px,100%)] -mt-2 sm:-mt-4 md:-mt-6 lg:-mt-8 z-20 pointer-events-none opacity-0"
         >
           <img
             src="/images/hero/hero-fish.png"
             alt="Matsya Fish"
-            className="w-full h-auto object-contain drop-shadow-[0_20px_25px_rgba(29,24,77,0.2)] scale-105 sm:scale-110"
+            className="block w-full h-auto object-contain drop-shadow-[0_20px_25px_rgba(29,24,77,0.2)]"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=1000&auto=format&fit=crop&q=80';
@@ -97,7 +82,7 @@ export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = fal
         {/* 3. MARATHI SUBTEXT & BUTTON */}
         <div
           ref={bottomContentRef}
-          className="flex flex-col items-center gap-4 sm:gap-5 -mt-8 sm:-mt-12 md:-mt-16 z-30 opacity-0"
+          className="flex flex-col items-center gap-4 sm:gap-5 mt-0 sm:-mt-2 md:-mt-4 z-30 opacity-0"
         >
           <p className="text-xl sm:text-2xl md:text-[28px] font-medium text-[#1D184D] leading-tight tracking-wide font-['Sora',sans-serif]">
             प्रत्येक <span className="font-bold text-[#1D184D]">MATSYA</span> मागे,<br />

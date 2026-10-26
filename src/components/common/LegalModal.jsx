@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, ShieldCheck, FileText, RefreshCw, Truck } from 'lucide-react';
 
 export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }) {

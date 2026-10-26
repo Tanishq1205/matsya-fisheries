@@ -104,3 +104,11 @@ export const getRelatedProducts = async (category, currentProductId, limit = 4) 
     return { data: [], error: error.message };
   }
 };
+// Public read-only business rule. A missing/null setting keeps preorders closed.
+export async function getPreorderNoticeDays() {
+  const { data, error } = await supabase.from('preorder_settings').select('min_notice_days').eq('id', 1).single();
+  if (error || !Number.isInteger(data?.min_notice_days) || data.min_notice_days < 1) {
+    throw new Error('Preorders are temporarily unavailable. Please check back later.');
+  }
+  return data.min_notice_days;
+}

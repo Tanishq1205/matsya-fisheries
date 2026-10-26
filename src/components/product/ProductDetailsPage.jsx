@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
-  HeartPulse, 
   Scale, 
   Minus, 
   Plus, 
@@ -10,6 +9,8 @@ import {
   Utensils 
 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
+import { cleanedWeightRange, formatCleanedWeight } from '../../services/cleanedWeight';
+import PremiumPreorder from '../catalog/PremiumPreorder';
 import RelatedProducts from './RelatedProducts';
 
 const DEFAULT_FALLBACK_PRODUCT = {
@@ -31,25 +32,9 @@ const DEFAULT_FALLBACK_PRODUCT = {
     { id: 'std-cut', name: 'Cleaned & RO Washed', description: 'Gutted, descaled, washed in pure RO water and ready to cook.', yield: '~75% Yield', yieldPercentage: 75 }
   ],
   weightPacks: [
-    { gross: 500, label: '500g Pack (Serves 2–3)' },
-    { gross: 1000, label: '1kg Pack (Serves 4–6)' }
+    { gross: 500, label: '500g' },
+    { gross: 1000, label: '1kg' }
   ],
-  healthBenefits: [
-    { title: 'Lean Protein', value: '20g / 100g', description: 'Supports daily energy and recovery.' },
-    { title: 'Omega-3', value: '1.2g EPA/DHA', description: 'Promotes cardiovascular health.' }
-  ]
-};
-
-// Helper function to extract numeric yield from string or number format
-const parseYieldPercentage = (cut) => {
-  if (!cut) return 75;
-  if (typeof cut.yieldPercentage === 'number') return cut.yieldPercentage;
-  if (typeof cut.yield === 'number') return cut.yield;
-  if (typeof cut.yield === 'string') {
-    const parsed = parseInt(cut.yield.replace(/[^0-9]/g, ''), 10);
-    return isNaN(parsed) ? 75 : parsed;
-  }
-  return 75;
 };
 
 export default function ProductDetailsPage({ product, onBack, onSelectProduct }) {
@@ -71,10 +56,6 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
     ? currentProduct.weightPacks 
     : DEFAULT_FALLBACK_PRODUCT.weightPacks;
 
-  const healthBenefits = Array.isArray(currentProduct.healthBenefits) && currentProduct.healthBenefits.length > 0 
-    ? currentProduct.healthBenefits 
-    : DEFAULT_FALLBACK_PRODUCT.healthBenefits;
-
   // Active Selections State
   const [selectedImage, setSelectedImage] = useState(images[0]);
   const [selectedCut, setSelectedCut] = useState(cuts[0]);
@@ -87,27 +68,10 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
 
-    const freshImages = Array.isArray(currentProduct.images) && currentProduct.images.length > 0 
-      ? currentProduct.images 
-      : [currentProduct.image || DEFAULT_FALLBACK_PRODUCT.images[0]];
-
-    const freshCuts = Array.isArray(currentProduct.cuts) && currentProduct.cuts.length > 0 
-      ? currentProduct.cuts 
-      : DEFAULT_FALLBACK_PRODUCT.cuts;
-
-    const freshWeightPacks = Array.isArray(currentProduct.weightPacks) && currentProduct.weightPacks.length > 0 
-      ? currentProduct.weightPacks 
-      : DEFAULT_FALLBACK_PRODUCT.weightPacks;
-
-    setSelectedImage(freshImages[0]);
-    setSelectedCut(freshCuts[0]);
-    setSelectedWeightPack(freshWeightPacks[0]);
-    setQuantity(1);
-  }, [currentProduct?.id, currentProduct?.name]);
+  }, [currentProduct.id]);
 
   const grossGrams = selectedWeightPack?.gross || 500;
-  const yieldPct = parseYieldPercentage(selectedCut);
-  const netGrams = Math.round((grossGrams * yieldPct) / 100);
+  const cleanedWeight = formatCleanedWeight(cleanedWeightRange(currentProduct, grossGrams, quantity));
 
   // Dynamic Price Calculation matching 500g vs 1kg DB columns
   const getUnitPrice = () => {
@@ -127,17 +91,19 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
     const itemToAdd = {
       id: `${currentProduct.id}-${selectedCut?.name || 'cut'}-${grossGrams}g`,
       productId: currentProduct.id,
+      in_stock: currentProduct.in_stock,
+      is_active: currentProduct.is_active,
       name: currentProduct.name,
       marathiName: currentProduct.localName || (currentProduct.marathiName ? `(${currentProduct.marathiName})` : ''),
       cut: selectedCut?.name || 'Cleaned',
       weight: `${grossGrams}g`,
       grossWeight: `${grossGrams}g`,
-      netWeight: `~${netGrams}g`,
+      netWeight: formatCleanedWeight(cleanedWeightRange(currentProduct, grossGrams)),
       price: calculatedPrice,
       quantity,
       image: images[0],
     };
-    if (addItem) addItem(itemToAdd, `${grossGrams}g`);
+    if (addItem) addItem(itemToAdd, `${grossGrams}g`, selectedCut?.name || 'Cleaned', quantity);
   };
 
   return (
@@ -155,7 +121,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
-          {/* Left Column: Image Gallery & Health Benefits */}
+          {/* Left Column: Image Gallery */}
           <div className="lg:col-span-6 flex flex-col gap-6">
             <div className="relative w-full aspect-[4/3] rounded-[32px] overflow-hidden bg-[#16123D] border-[3px] border-[#1D184D]/10 shadow-xl">
               <img
@@ -191,26 +157,6 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
               </div>
             )}
 
-            <div className="bg-white/70 backdrop-blur-md rounded-[28px] p-6 border border-[#1D184D]/10 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <HeartPulse className="w-5 h-5 text-[#C2542D]" />
-                <h3 className="text-base font-bold uppercase tracking-wider text-[#1D184D]">
-                  Health & Nutritional Benefits
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {healthBenefits.map((item, index) => (
-                  <div key={index} className="bg-[#FAF7EE] p-4 rounded-2xl border border-[#1D184D]/5 flex flex-col justify-between">
-                    <div>
-                      <h4 className="text-xs font-bold text-[#1D184D]/70 uppercase tracking-wider">{item.title}</h4>
-                      <p className="text-lg font-black text-[#1D184D] mt-0.5">{item.value}</p>
-                    </div>
-                    <p className="text-[11px] text-[#1D184D]/60 mt-2 leading-snug">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Right Column: Cuts, Pack Sizes & Checkout CTA */}
@@ -241,7 +187,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
                 ₹{calculatedPrice * quantity}
               </span>
               <span className="text-xs sm:text-sm text-[#FAF7EE]/70 font-medium">
-                (for {grossGrams * quantity}g Gross / ~{netGrams * quantity}g Net)
+                For {grossGrams * quantity}g before cleaning
               </span>
             </div>
 
@@ -254,7 +200,6 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
 
               <div className="grid grid-cols-1 gap-3">
                 {cuts.map((cut, index) => {
-                  const currentYield = parseYieldPercentage(cut);
                   const isSelected = selectedCut?.name === cut.name;
                   return (
                     <button
@@ -269,11 +214,6 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-sm font-bold uppercase tracking-wider">{cut.name}</span>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          isSelected ? 'bg-[#D5C582] text-[#1D184D]' : 'bg-[#1D184D]/10 text-[#1D184D]'
-                        }`}>
-                          {cut.yield || `~${currentYield}% Yield`}
-                        </span>
                       </div>
                       <p className={`text-xs ${isSelected ? 'text-[#FAF7EE]/80' : 'text-[#1D184D]/60'}`}>
                         {cut.description}
@@ -302,26 +242,38 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
                         : 'bg-white/80 text-[#1D184D] border-[#1D184D]/10 font-semibold hover:border-[#1D184D]/40'
                     }`}
                   >
-                    <span className="block text-sm uppercase">{pack.label}</span>
+                    <span className="block text-sm">{pack.gross === 1000 ? '1kg' : '500g'}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Transparency Yield Guarantee */}
+            {/* Approximate cleaned weight for the selected packs */}
             <div className="bg-[#D5C582]/20 border border-[#D5C582] p-4 rounded-2xl flex items-center gap-3">
               <Scale className="w-6 h-6 text-[#1D184D] shrink-0" />
               <div className="text-xs text-[#1D184D]">
-                <span className="font-bold uppercase block mb-0.5">Matsya Weight Promise</span>
-                Gross Weight: <strong>{grossGrams * quantity}g</strong> → Net Edible Weight after cleaning: <strong>~{netGrams * quantity}g</strong> (No waste paid for).
+                <span className="font-bold uppercase block mb-0.5">Weight after cleaning & cutting</span>
+                <p>Ordered weight before cleaning: <strong>{grossGrams * quantity}g</strong>.</p>
+                <p className="mt-1" aria-live="polite">{cleanedWeight ? <>Approximate weight after cleaning: <strong>{cleanedWeight}</strong>.</> : 'Cleaned weight varies by fish and cut. Contact us for an estimate before ordering.'}</p>
+                <p className="mt-2 text-[#1D184D]/70">These are approximate weights and may vary depending on the fish variety and preparation method.</p>
               </div>
             </div>
 
             {/* Quantity Adjuster & Add to Cart CTA */}
-            <div className="flex gap-4 items-center pt-2">
+            <div className="flex flex-col gap-3 pt-2">
+              <h2 className="text-xs font-bold uppercase tracking-widest">3. Number of Packs</h2>
+              <p className="text-xs text-[#1D184D]/70">
+                Use + to add more packs. For 1.5kg, choose 500g and select 3 packs.
+              </p>
+              <p className="text-sm font-semibold" aria-live="polite">
+                {quantity} × {grossGrams === 1000 ? '1kg' : '500g'} = {grossGrams * quantity >= 1000 ? `${grossGrams * quantity / 1000}kg` : `${grossGrams * quantity}g`} total
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
               <div className="flex items-center bg-white border border-[#1D184D]/20 rounded-full p-1.5 shadow-sm">
                 <button
                   type="button"
+                  aria-label="Remove one pack"
+                  disabled={quantity <= 1}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   className="w-9 h-9 rounded-full bg-[#FAF7EE] hover:bg-[#1D184D] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                 >
@@ -330,7 +282,9 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
                 <span className="w-10 text-center font-bold text-sm">{quantity}</span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
+                  aria-label="Add one pack"
+                  disabled={quantity >= 999}
+                  onClick={() => setQuantity((q) => Math.min(999, q + 1))}
                   className="w-9 h-9 rounded-full bg-[#FAF7EE] hover:bg-[#1D184D] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -340,12 +294,16 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="flex-1 bg-[#1D184D] hover:bg-[#15113A] text-[#D5C582] py-4 px-6 rounded-full font-bold text-xs sm:text-sm tracking-widest uppercase shadow-xl hover:shadow-2xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center gap-3 border border-[#D5C582]/30 cursor-pointer"
+                disabled={currentProduct.in_stock === false || currentProduct.is_active === false}
+                className="w-full sm:w-auto flex-1 bg-[#1D184D] hover:bg-[#15113A] text-[#D5C582] py-4 px-6 rounded-full font-bold text-xs sm:text-sm tracking-widest uppercase shadow-xl hover:shadow-2xl transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center gap-3 border border-[#D5C582]/30 cursor-pointer"
               >
                 <ShoppingBag className="w-5 h-5 text-[#D5C582]" />
                 ADD TO CART • ₹{calculatedPrice * quantity}
               </button>
+              </div>
             </div>
+
+            {currentProduct.category === 'Premium Sea Fish' && <PremiumPreorder products={[currentProduct]} />}
 
             <div className="flex items-center justify-between text-xs font-semibold text-[#1D184D]/70 border-t border-[#1D184D]/10 pt-4 mt-2">
               <span className="flex items-center gap-1.5">
