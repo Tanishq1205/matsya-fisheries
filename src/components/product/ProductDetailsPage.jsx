@@ -18,9 +18,9 @@ const DEFAULT_FALLBACK_PRODUCT = {
   name: 'Fresh Coastal Catch',
   localName: '(ताजी मासोळी)',
   marathiName: 'ताजी मासोळी',
-  subtitle: 'Daily dock landing cleaned with pure RO water and customized to order.',
+  subtitle: 'Daily dock landing cleaned and customized to order.',
   badgeText: '100% DOCK FRESH',
-  landingOrigin: 'Cleaned & RO Washed',
+  landingOrigin: 'Cleaned',
   price_500g: 399,
   price_1kg: 750,
   pricePerGrossKg: 750,
@@ -29,7 +29,7 @@ const DEFAULT_FALLBACK_PRODUCT = {
     'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=800&auto=format&fit=crop&q=80',
   ],
   cuts: [
-    { id: 'std-cut', name: 'Cleaned & RO Washed', description: 'Gutted, descaled, washed in pure RO water and ready to cook.', yield: '~75% Yield', yieldPercentage: 75 }
+    { id: 'std-cut', name: 'Cleaned', description: 'Gutted, descaled and ready to cook.', yield: '~75% Yield', yieldPercentage: 75 }
   ],
   weightPacks: [
     { gross: 500, label: '500g' },
@@ -163,7 +163,7 @@ export default function ProductDetailsPage({ product, onBack, onSelectProduct })
           <div className="lg:col-span-6 flex flex-col gap-6">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-[#C2542D] uppercase mb-1">
-                <span>{currentProduct.landingOrigin || 'Cleaned & RO Washed'}</span>
+                <span>{currentProduct.landingOrigin || 'Cleaned'}</span>
                 {currentProduct.category && (
                   <>
                     <span>•</span>

@@ -21,7 +21,7 @@ export const useCartStore = create(
 
       setDeliverySlot: (slot) => set({ deliverySlot: slot }),
 
-      addItem: (product, weight = '1kg', cut = 'Cleaned & RO Washed', quantity = 1, schedule = null) => {
+      addItem: (product, weight = '1kg', cut = 'Cleaned', quantity = 1, schedule = null) => {
         if (!product) return;
         if (product.in_stock === false || product.is_active === false) {
           useToastStore.getState().showToast('Product unavailable', 'Please choose another catch.');

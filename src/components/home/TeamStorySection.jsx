@@ -100,7 +100,7 @@ export default function TeamStorySection() {
                 In 2023, <strong className="font-black text-[#1D184D]">Omkar Gaikwad</strong> founded <strong className="font-black text-[#C2542D]">MATSYA FISHERIES</strong> around one single discipline: <em>hygienic handling</em>. Freshness matters, but how the catch is handled from landing to delivery matters more.
               </p>
               <p>
-                From dockside sourcing at dawn to RO-water processing and direct delivery, he built a daily operation supplying household tables, restaurants, caterers, and institutional kitchens across Mumbai with guaranteed 100% net edible weight.
+                From dockside sourcing at dawn to careful preparation and direct delivery, he built a daily operation supplying household tables, restaurants, caterers, and institutional kitchens across Mumbai with guaranteed 100% net edible weight.
               </p>
             </div>
 

@@ -7,7 +7,7 @@ const { chromium } = await import(pathToFileURL(process.env.MATSYA_PLAYWRIGHT).h
 const base = process.env.MATSYA_REVIEW_URL || 'http://127.0.0.1:5173';
 const products = ['Surmai', 'Rawas', 'Unavailable Fish'].map((name, i) => ({
   id: `33333333-3333-4333-8333-33333333333${i}`, name, category: 'Premium Sea Fish',
-  price_500g: 399, price_1kg: 750, standard_cut: 'Cleaned', is_active: true,
+  price_500g: 399, price_1kg: 750, standard_cut: 'Cleaned & RO Washed', landing_origin: 'Cleaned & RO Washed', subtitle: 'Cleaned in pure RO water', is_active: true,
   in_stock: i !== 2, image_url: '/images/hero/hero-fish.png', created_at: new Date().toISOString(),
 }));
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
@@ -44,6 +44,7 @@ await context.route('**/*.supabase.co/**', async route => {
   if (url.pathname.endsWith('/rpc/place_order_once')) {
     submissions++;
     order = { ...req.postDataJSON().order_payload, id: '44444444-4444-4444-8444-444444444444', order_number: 123, customer_id: '11111111-1111-4111-8111-111111111111', created_at: new Date().toISOString(), order_status: 'placed', payment_status: 'pending' };
+    order.items = order.items.map(item => ({ ...item, cut: 'Cleaned & RO Washed' }));
     return json(order);
   }
   if (url.pathname.endsWith('/orders')) {
@@ -72,6 +73,7 @@ try {
   assert.ok(await page.locator('#all-products').evaluate(el => el.getBoundingClientRect().top < 200));
   await page.locator('#all-products').getByRole('heading', { name: 'Surmai', exact: true }).click();
   await visible('Surmai');
+  assert.doesNotMatch(await page.locator('body').innerText(), /\bRO[\s-]+(?:water|washed)\b/i);
   assert.match(await page.locator('main').innerText(), /350–400g/);
   await page.getByRole('button', { name: 'Add one pack' }).click({ clickCount: 2 });
   assert.match(await page.locator('main').innerText(), /3 × 500g = 1.5kg total/);
@@ -91,15 +93,21 @@ try {
   await page.locator('[name=phone]').fill('9876543210');
   await page.locator('[name=firstName]').fill('Review');
   await page.locator('[name=streetAddress]').fill('Test address only');
+  await page.getByRole('radio', { name: /UPI on delivery/ }).check();
   await page.getByRole('button', { name: /PLACE ORDER/ }).click();
   await visible('Thank You, Review!');
   assert.equal(submissions, 1);
+  assert.equal(order.payment_method, 'UPI');
+  assert.equal(order.payment_status, 'pending');
+  assert.ok((await page.locator('main').innerText()).includes('UPI on delivery'));
   assert.equal(order.items[0].quantity, 3);
   assert.equal(order.delivery_fee, 12.5);
   assert.equal(order.total_amount, 1209.5);
   console.log('PASS: pack quantity, PIN prefill, refresh, unavailable PIN, decimal delivery, simulated order');
   await page.getByRole('button', { name: 'TRACK ORDER', exact: true }).click();
   await page.getByText('#MATSYA-123', { exact: true }).waitFor();
+  assert.doesNotMatch(await page.locator('main').innerText(), /\bRO[\s-]+(?:water|washed)\b/i);
+  assert.match(await page.locator('main').innerText(), /UPI on delivery.*pending/i);
   await page.reload(); await ready();
   await page.getByText('#MATSYA-123', { exact: true }).waitFor();
   await page.getByRole('link', { name: 'Catches', exact: true }).click();

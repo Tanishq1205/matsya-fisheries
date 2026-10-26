@@ -123,7 +123,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }) {
               <p>Matsya Fisheries operates a cold-chain dock-to-door fresh catch logistics network across serviceable pincodes in Mumbai.</p>
 
               <h4 className="font-bold text-[#1D184D] pt-2">1. Cold-Chain Packaging</h4>
-              <p>All catch cuts are double-cleaned in pure RO water, packed in food-grade thermal ice trays, and dispatched sealed to maintain optimal core temperature during transit.</p>
+              <p>All catch cuts are cleaned, packed in food-grade thermal ice trays, and dispatched sealed to maintain optimal core temperature during transit.</p>
 
               <h4 className="font-bold text-[#1D184D] pt-2">2. Delivery Slots & Timings</h4>
               <p>Orders are dispatched according to designated catch slots:<br />

@@ -21,7 +21,7 @@ export default function PremiumPreorder({ products = [] }) {
   const pack = weight === '500g' && product?.price_500g > 0 ? '500g' : '1kg';
   const price = Number(pack === '500g' ? product?.price_500g : product?.price_1kg);
   const cuts = product?.cuts?.map(item => item.name) || product?.cut_options_detail?.map(item => item.name) || [];
-  const choices = cuts.length ? cuts : [product?.standard_cut || 'Cleaned & RO Washed'];
+  const choices = cuts.length ? cuts : [product?.standard_cut || 'Cleaned'];
   const selectedCut = choices.includes(cut) ? cut : choices[0];
   useEffect(() => {
     let cancelled = false;

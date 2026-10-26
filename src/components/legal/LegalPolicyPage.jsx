@@ -177,7 +177,7 @@ export default function LegalPolicyPage({ policyType = 'privacy', onBackToCatalo
                   1. Cold-Chain Delivery Slots
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-700">
-                  All catches are packed in insulated thermal ice trays cleaned with pure RO water to ensure constant temperature management. Delivery is executed in designated windows:
+                  All catches are packed in insulated thermal ice trays for temperature management during delivery. Delivery is executed in designated windows:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-gray-700">
                   <li><strong>Morning Catch Slot:</strong> 7:00 AM – 10:00 AM</li>

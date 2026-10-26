@@ -1,7 +1,10 @@
+import { cleanCatalogCopy } from './productCopy.js';
+
 /**
  * Format database product row into standard payload for Product Details Modal
  */
-export const formatForDetailsPage = (item) => {
+export const formatForDetailsPage = (rawItem) => {
+  const item = cleanCatalogCopy(rawItem);
   const defaultImage = item.image_url || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=800&auto=format&fit=crop&q=80';
   const galleryImages = item.gallery_urls && Array.isArray(item.gallery_urls) && item.gallery_urls.length > 0
     ? item.gallery_urls
@@ -17,7 +20,7 @@ export const formatForDetailsPage = (item) => {
     localName: item.marathi_name ? `(${item.marathi_name})` : '',
     subtitle: item.subtitle || '',
     badgeText: item.badge_text || '100% DOCK FRESH',
-    landingOrigin: item.landing_origin || 'Cleaned & RO Washed',
+    landingOrigin: item.landing_origin || 'Cleaned',
     price_500g: item.price_500g,
     price_1kg: item.price_1kg,
     mrp_500g: item.mrp_500g,
@@ -28,8 +31,8 @@ export const formatForDetailsPage = (item) => {
       ? item.cut_options_detail
       : [
           {
-            name: item.standard_cut || 'Cleaned & RO Washed',
-            description: 'Gutted, descaled, washed in pure RO water and ready to cook.',
+            name: item.standard_cut || 'Cleaned',
+            description: 'Gutted, descaled and ready to cook.',
             yield: '~80% Yield'
           }
         ],

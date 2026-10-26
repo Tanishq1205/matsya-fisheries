@@ -1,3 +1,4 @@
+import { cleanProductText } from '../../services/productCopy';
 import { formatDeliveryDate } from '../../services/preorder';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -27,7 +28,7 @@ const TRACKING_STEPS = [
   {
     key: 'dock_processing',
     title: 'Dock Processing',
-    description: 'Gutted, RO washed & temp-chilled in ice gel',
+    description: 'Cleaned and chilled in ice gel',
     icon: Fish,
   },
   {
@@ -221,7 +222,7 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
           <span className="text-xs text-[#1D184D]/60 block">Total Amount</span>
           <span className="text-lg font-black text-[#1D184D]">₹{order.total_amount || 0}</span>
           <span className="text-[10px] text-[#2B7A4B] font-bold block uppercase">
-            {order.payment_method === 'UPI' ? 'Pay via UPI' : 'Cash on Delivery'} • {order.payment_status || 'Pending'}
+            {order.payment_method === 'UPI' ? 'UPI on delivery' : 'Cash on Delivery'} • {order.payment_status || 'Pending'}
           </span>
         </div>
       </div>
@@ -311,7 +312,7 @@ export default function OrderTrackingPage({ onBackToCatalog }) {
                 <div>
                   <span className="font-bold text-[#1D184D] block">{item.name}</span>
                   <span className="text-[11px] text-[#1D184D]/60">
-                    {item.weight} • {item.cut || 'Cleaned'} x{item.quantity}
+                    {item.weight} • {cleanProductText(item.cut) || 'Cleaned'} x{item.quantity}
                   </span>
                 </div>
               </div>

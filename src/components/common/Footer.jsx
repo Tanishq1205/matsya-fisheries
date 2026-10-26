@@ -255,7 +255,7 @@ export default function Footer({
             <span><strong>27AAUCM6344G1ZZ</strong></span>
           </div>
           <div>
-            <span className="text-white/60">100% RO Washed & Temperature-Controlled Cold-Chain</span>
+            <span className="text-white/60">Temperature-Controlled Cold-Chain</span>
           </div>
         </div>
       </div>

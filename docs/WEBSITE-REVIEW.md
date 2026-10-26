@@ -39,12 +39,19 @@ The functional review and fixes are available locally. These changes have not be
 - The older location popup now checks the same delivery service as checkout. Removed its invented GPS PIN and broad 400xxx fallback.
 - Email and last-name labels correctly identify optional checkout fields. The legacy checkout entry point reuses the main checkout instead of a second implementation.
 
+## Product wording and payment clarification
+
+- Removed RO-water cleaning claims from homepage copy, product fallbacks, footer, legal pages, checkout, tracking and admin text.
+- Catalog descriptions and cuts are cleaned for display, including legacy labels from stored baskets, old orders and WhatsApp receipts. Stored order contents, basket identifiers and checkout retry payloads are preserved.
+- Checkout, confirmation, tracking and admin label UPI as payment on delivery. Choosing it places a pending order; staff verify the received payment before marking it paid. No online payment gateway is connected.
+- Regression uses catalog and historical order fixtures with the old wording and checks that it does not appear. It also chooses UPI in checkout and verifies the saved pending state.
+
 ## Verification
 
 | Check | Result |
 | --- | --- |
 | Production build | Passed |
-| Node tests: CAPTCHA lifecycle, cart quantities, checkout retry keys, metadata output, receipt contents, cleaned-weight ranges, preorder dates and basket separation | 19 passed |
+| Node tests: CAPTCHA lifecycle, cart quantities, checkout retry keys, metadata output, receipt contents, cleaned-weight ranges, preorder dates and basket separation | 22 passed |
 | Browser flow using mocked Supabase responses | Passed |
 | Mobile and desktop viewport checks | Passed at 320, 390, 768, 1024, and 1440px |
 | Browser uncaught JavaScript errors during regression | None |

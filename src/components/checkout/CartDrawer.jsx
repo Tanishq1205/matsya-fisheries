@@ -1,3 +1,4 @@
+import { cleanProductText } from '../../services/productCopy';
 
 import { formatDeliveryDate } from '../../services/preorder';
 import { useCartStore } from '../../store/useCartStore';
@@ -134,7 +135,7 @@ export default function CartDrawer({ onOpenCheckout }) {
                         {item.name || 'Fresh Catch'} {item.marathiName && <span className="font-normal text-white/70">({item.marathiName})</span>}
                       </h4>
                       <p className="text-[11px] text-white/60 mt-0.5">
-                        {item.weight} • {item.cut || 'Cleaned'}
+                        {item.weight} • {cleanProductText(item.cut) || 'Cleaned'}
                       </p>
                       <p className="text-sm font-bold text-[#FAF7EE] mt-1">
                         ₹{(item.price || 0) * (item.quantity || 1)}

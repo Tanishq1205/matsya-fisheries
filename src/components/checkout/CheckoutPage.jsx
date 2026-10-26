@@ -1,3 +1,4 @@
+import { cleanProductText } from '../../services/productCopy';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
@@ -221,7 +222,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
               </div>
               <div className="flex justify-between border-b border-[#1D184D]/10 pb-2">
                 <span className="text-[#1D184D]/70">Payment Method:</span>
-                <span className="font-bold text-[#1D184D]">{formData.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Pay via UPI'}</span>
+                <span className="font-bold text-[#1D184D]">{formData.paymentMethod === 'COD' ? 'Cash on Delivery' : 'UPI on delivery'}</span>
               </div>
               <div className="flex justify-between text-[#1D184D] font-bold text-base pt-1">
                 <span>Total Amount:</span>
@@ -438,7 +439,7 @@ export default function CheckoutPage({ onBackToCatalog }) {
                           />
                           <div className="truncate">
                             <h4 className="font-bold text-[#1D184D] truncate">{item.name}</h4>
-                            <p className="text-[11px] text-[#1D184D]/60">{item.weight} • {item.cut || 'Cleaned'} x{item.quantity}</p>
+                            <p className="text-[11px] text-[#1D184D]/60">{item.weight} • {cleanProductText(item.cut) || 'Cleaned'} x{item.quantity}</p>
                           </div>
                         </div>
                         <span className="font-bold text-[#1D184D] shrink-0">₹{(item.price || 0) * (item.quantity || 1)}</span>
@@ -465,13 +466,13 @@ export default function CheckoutPage({ onBackToCatalog }) {
                   </div>
                 </div>
 
-                {/* EVERY PRODUCT CLEANED & RO WASHED Box */}
+                {/* CLEANED AND PREPARED WITH CARE Box */}
                 <div className="border border-dashed border-[#C2542D]/50 bg-[#C2542D]/5 p-4 rounded-2xl space-y-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#C2542D] block">
-                    EVERY PRODUCT CLEANED & RO WASHED
+                    CLEANED AND PREPARED WITH CARE
                   </span>
                   <p className="text-[11px] text-[#1D184D]/70 leading-snug">
-                     Cleaned in pure RO water and delivered with Care
+                     Carefully prepared and delivered with care
                   </p>
                 </div>
               </div>
@@ -525,8 +526,8 @@ export default function CheckoutPage({ onBackToCatalog }) {
                         className="accent-[#1D184D] w-4 h-4"
                       />
                       <div>
-                        <span className="text-xs font-bold text-[#1D184D] block">Pay via UPI</span>
-                        <span className="text-[10px] text-[#1D184D]/60 block mt-0.5">Google Pay / PhonePe / Paytm upon delivery.</span>
+                        <span className="text-xs font-bold text-[#1D184D] block">UPI on delivery</span>
+                        <span className="text-[10px] text-[#1D184D]/60 block mt-0.5">Pay using your UPI app when your order arrives. Payment stays pending until our team verifies receipt.</span>
                       </div>
                     </div>
                   </label>

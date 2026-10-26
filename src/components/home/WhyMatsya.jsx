@@ -7,7 +7,7 @@ const FEATURES = [
     number: '01',
     title: 'HYGIENE',
     description:
-      'Our first priority, before freshness. Every catch is handled with care, cleaned in pure RO water, processed with discipline and delivered with confidence.',
+      'Our first priority, before freshness. Every catch is handled with care, cleaned, processed with discipline and delivered with confidence.',
     icon: ShieldCheck,
   },
   {

@@ -1,3 +1,4 @@
+import { cleanProductText } from '../services/productCopy.js';
 import { formatDeliveryDate } from '../services/preorder.js';
 /**
  * Helper utilities for WhatsApp messaging across Matsya Fisheries
@@ -26,7 +27,7 @@ export const getWhatsAppReceiptLink = (order, siteUrl = import.meta.env?.VITE_SI
       ? items
           .map(
             (item) =>
-              `• *${item.name}* (${item.weight || 'Standard'} | ${item.cut || 'Cleaned'}) x${item.quantity || 1} — ₹${(item.price || 0) * (item.quantity || 1)}`
+              `• *${item.name}* (${item.weight || 'Standard'} | ${cleanProductText(item.cut) || 'Cleaned'}) x${item.quantity || 1} — ₹${(item.price || 0) * (item.quantity || 1)}`
           )
           .join('\n')
       : '• *Fresh Catch Items*';

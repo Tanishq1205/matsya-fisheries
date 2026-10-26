@@ -1,3 +1,4 @@
+import { cleanProductText } from '../../services/productCopy';
 import { formatDeliveryDate } from '../../services/preorder';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Clock, ShoppingBag, RefreshCw, Lock, MessageCircle } from 'lucide-react';
@@ -268,7 +269,7 @@ const handlePinSubmit = async (e) => {
           <div className="bg-white p-5 rounded-2xl border border-[#1D184D]/10 shadow-sm">
             <span className="text-[11px] font-bold text-[#1D184D] uppercase tracking-wider block">Dock Processing</span>
             <span className="text-2xl font-black text-[#1D184D] mt-1 block">{processingCount}</span>
-            <span className="text-[10px] text-[#1D184D]/50 font-semibold mt-1 block">Gutted & RO washed</span>
+            <span className="text-[10px] text-[#1D184D]/50 font-semibold mt-1 block">Cleaned and prepared</span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-[#1D184D]/10 shadow-sm">
@@ -385,7 +386,7 @@ const handlePinSubmit = async (e) => {
                       <span className="font-bold text-[#1D184D] block mb-1">Fulfillment Details</span>
                       {order.order_type === 'preorder' && <p className="font-bold text-[#C2542D]">PREORDER · Delivery {formatDeliveryDate(order.delivery_date)}</p>}
                       <p className="text-[#1D184D]/80 font-semibold">Slot: {order.delivery_slot || 'Morning Catch'}</p>
-                      <p className="text-[#1D184D]/80 font-semibold mt-0.5">Payment: {order.payment_method === 'UPI' ? 'Pay via UPI' : 'Cash on Delivery'} ({order.payment_status || 'pending'})</p>
+                      <p className="text-[#1D184D]/80 font-semibold mt-0.5">Payment: {order.payment_method === 'UPI' ? 'UPI on delivery' : 'Cash on Delivery'} ({order.payment_status || 'pending'})</p>
                       {String(order.payment_status || 'pending').toLowerCase() === 'pending' && (
                         <button type="button" disabled={updatingOrderId === order.id}
                           onClick={() => handleCollectPayment(order)}
@@ -405,7 +406,7 @@ const handlePinSubmit = async (e) => {
                       {items.map((item, idx) => (
                         <div key={idx} className="py-2 flex items-center justify-between text-xs">
                           <span className="font-bold text-[#1D184D]">
-                            {item.name} <span className="text-[#1D184D]/50 font-normal">({item.weight} • {item.cut || 'Cleaned'}) x{item.quantity}</span>
+                            {item.name} <span className="text-[#1D184D]/50 font-normal">({item.weight} • {cleanProductText(item.cut) || 'Cleaned'}) x{item.quantity}</span>
                           </span>
                           <span className="font-bold text-[#1D184D]">₹{(item.price || 0) * (item.quantity || 1)}</span>
                         </div>

@@ -1,3 +1,4 @@
+import { cleanCatalogCopy } from './productCopy.js';
 import { supabase } from '../lib/supabaseClient';
 
 /**
@@ -12,7 +13,7 @@ export const getAllProducts = async () => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { data, error: null };
+    return { data: cleanCatalogCopy(data), error: null };
   } catch (error) {
     console.error('Error fetching all products:', error.message);
     return { data: [], error: error.message };
@@ -34,7 +35,7 @@ export const getProductsByCategory = async (category) => {
     const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { data, error: null };
+    return { data: cleanCatalogCopy(data), error: null };
   } catch (error) {
     console.error(`Error fetching products for category ${category}:`, error.message);
     return { data: [], error: error.message };
@@ -54,7 +55,7 @@ export const getProductById = async (id) => {
       .single();
 
     if (error) throw error;
-    return { data, error: null };
+    return { data: cleanCatalogCopy(data), error: null };
   } catch (error) {
     console.error(`Error fetching product ID ${id}:`, error.message);
     return { data: null, error: error.message };
@@ -74,7 +75,7 @@ export const getFeaturedProducts = async () => {
       .limit(6);
 
     if (error) throw error;
-    return { data, error: null };
+    return { data: cleanCatalogCopy(data), error: null };
   } catch (error) {
     console.error('Error fetching featured products:', error.message);
     return { data: [], error: error.message };
@@ -98,7 +99,7 @@ export const getRelatedProducts = async (category, currentProductId, limit = 4) 
       .limit(limit);
 
     if (error) throw error;
-    return { data, error: null };
+    return { data: cleanCatalogCopy(data), error: null };
   } catch (error) {
     console.error('Error fetching related products:', error.message);
     return { data: [], error: error.message };
