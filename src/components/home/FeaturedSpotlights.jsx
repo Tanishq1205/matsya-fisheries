@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { getAllProducts } from '../../services/productService';
 import { formatForDetailsPage } from '../../services/productPresentation';
 import SectionDivider from '../common/SectionDivider';
+import { useToastStore } from '../../store/useToastStore';
 
 const FEATURED_ITEMS = [
   {
@@ -150,7 +151,8 @@ export default function FeaturedSpotlights({ onSelectProduct }) {
         : foundProduct;
       onSelectProduct(formatted);
     } else {
-      onSelectProduct(item.name);
+      useToastStore.getState().showToast('Catch currently unavailable', 'Please choose from the current catalog.');
+      window.location.assign('#all-products');
     }
   };
 

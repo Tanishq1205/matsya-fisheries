@@ -50,8 +50,8 @@ export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = fal
       className="relative w-full h-screen min-h-[680px] bg-[#FAF7EE] flex flex-col justify-between items-center overflow-hidden pt-20 pb-16 select-none"
     >
       {/* Shared background artwork used across the hero slides */}
-      <FishOutline className="absolute top-10 left-8 pointer-events-none w-24 sm:w-36 h-auto z-0" />
-      <FishOutline className="absolute bottom-24 right-8 pointer-events-none w-28 sm:w-40 h-auto z-0" />
+      <FishOutline className="hc-doodle tr" />
+      <FishOutline className="hc-doodle bl" />
 
       {/* Vertically Centered Content Container */}
       <div className="relative z-10 max-w-[1600px] w-full px-4 flex flex-col items-center text-center my-auto">
@@ -66,7 +66,7 @@ export default function HeroBanner({ onExploreCatalog, isPreloaderFinished = fal
         {/* 2. FISH IMAGE WITH SPACE FOR THE HEADLINE AND CTA */}
         <div
           ref={fishRef}
-          className="w-[117%] max-w-[min(1378px,100%)] -mt-2 sm:-mt-4 md:-mt-6 lg:-mt-8 z-20 pointer-events-none opacity-0"
+          className="w-[90%] max-w-[1240.2px] -mt-2 sm:-mt-4 md:-mt-6 lg:-mt-8 z-20 pointer-events-none opacity-0"
         >
           <img
             src="/images/hero/hero-fish.png"

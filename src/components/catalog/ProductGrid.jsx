@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Eye, Search, X, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { getAllProducts } from '../../services/productService';
 import PremiumPreorder from './PremiumPreorder';
 import SectionDivider from '../common/SectionDivider';
 
-import { formatForDetailsPage } from '../../services/productPresentation';
+import { formatForDetailsPage, productDiscount } from '../../services/productPresentation';
+
+const CATALOG_FILLERS = {
+  6: { src: '/images/catalog/filler-01.png', alt: 'Aaj Kay Fishy Aahe?' },
+  12: { src: '/images/catalog/filler-02.png', alt: 'Kay Maal aahe, भाऊ!' },
+};
 
 function ProductCard({ product, onSelectProduct }) {
   const [weight, setWeight] = useState(product.price_500g ? '500g' : '1kg');
@@ -14,9 +19,8 @@ function ProductCard({ product, onSelectProduct }) {
   const price = weight === '500g' ? product.price_500g : product.price_1kg;
   const mrp = weight === '500g' ? product.mrp_500g : product.mrp_1kg;
   
-  // Calculate display MRP if null in database
-  const originalPrice = mrp || Math.round(price * (1 + (product.discount_percent || 20) / 100));
-  const discountPercent = product.discount_percent || Math.round(((originalPrice - price) / originalPrice) * 100);
+  const { originalPrice, discountPercent } = productDiscount(price, mrp);
+  const unavailable = product.in_stock === false || product.is_active === false || !(Number(price) > 0);
 
   const displayImage = product.image_url || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=500&auto=format&fit=crop&q=60';
 
@@ -124,13 +128,14 @@ function ProductCard({ product, onSelectProduct }) {
 
         <button
           type="button"
+          disabled={unavailable}
           onClick={(e) => {
             e.stopPropagation();
             if (addItem) addItem(product, weight);
           }}
           className="py-2.5 px-4 rounded-xl bg-[#D5C582] hover:bg-[#E5D79E] text-[#1D184D] text-xs font-bold tracking-wider uppercase transition-all duration-150 active:scale-95 cursor-pointer"
         >
-          Quick Add to Cart
+          {unavailable ? 'Currently unavailable' : 'Quick Add to Cart'}
         </button>
       </div>
     </div>
@@ -268,13 +273,27 @@ export default function ProductGrid({ onSelectProduct, category = 'ALL', onCateg
           </div>
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 sm:gap-8 p-2 overflow-visible">
-            {filteredProducts.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                product={product} 
-                onSelectProduct={onSelectProduct} 
-              />
-            ))}
+            {filteredProducts.map((product, index) => {
+              const filler = CATALOG_FILLERS[index + 1];
+              return (
+                <Fragment key={product.id}>
+                  <ProductCard product={product} onSelectProduct={onSelectProduct} />
+                  {filler && index < filteredProducts.length - 1 && (
+                    <div className="col-span-full overflow-hidden rounded-xl">
+                      <img
+                        src={filler.src}
+                        alt={filler.alt}
+                        width="9820"
+                        height="355"
+                        loading="lazy"
+                        decoding="async"
+                        className="block w-full h-14 lg:h-auto lg:min-h-12 object-cover object-center"
+                      />
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })}
           </div>
         ) : (
           <div className="w-full py-16 text-center bg-white/50 rounded-2xl border border-[#1D184D]/10">

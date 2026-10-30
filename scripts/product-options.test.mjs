@@ -2,6 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanedWeightRange, formatCleanedWeight } from '../src/services/cleanedWeight.js';
 import { earliestPreorderDate, validatePreorderDate, isPreorderProduct } from '../src/services/preorder.js';
+import { productDiscount, productCuts, formatForDetailsPage } from '../src/services/productPresentation.js';
+
+test('discounts use the listed MRP and never invent a reference price', () => {
+  assert.deepEqual(productDiscount(400, 500), { originalPrice: 500, discountPercent: 20 });
+  assert.equal(productDiscount(399, 479).discountPercent, 16);
+  for (const mrp of [null, undefined, 0, 300, 400, 'invalid']) {
+    assert.deepEqual(productDiscount(400, mrp), { originalPrice: null, discountPercent: 0 });
+  }
+});
+
+test('basic cuts remain selectable in details and preorders when detailed cuts are empty', () => {
+  const fish = { name: 'Surmai', standard_cut: 'Cleaned', cut_options_detail: [], cut_options: ['Steaks', 'Fillets'] };
+  assert.deepEqual(productCuts(fish).map(cut => cut.name), ['Steaks', 'Fillets']);
+  assert.deepEqual(formatForDetailsPage(fish).cuts.map(cut => cut.name), ['Steaks', 'Fillets']);
+  assert.deepEqual(productCuts({ ...fish, cut_options_detail: [{ name: 'Whole', description: 'Custom preparation' }] }),
+    [{ name: 'Whole', description: 'Custom preparation' }]);
+  assert.deepEqual(productCuts({ standard_cut: 'Cleaned', cut_options_detail: [null, {}] }).map(cut => cut.name), ['Cleaned']);
+});
 
 test('owner-provided cleaned weights scale with pack size and quantity', () => {
   for (const name of ['Surmai', 'Rawas', 'Bombil']) {

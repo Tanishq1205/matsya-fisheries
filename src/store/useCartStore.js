@@ -21,7 +21,7 @@ export const useCartStore = create(
 
       setDeliverySlot: (slot) => set({ deliverySlot: slot }),
 
-      addItem: (product, weight = '1kg', cut = 'Cleaned', quantity = 1, schedule = null) => {
+      addItem: (product, weight = '1kg', cut = null, quantity = 1, schedule = null) => {
         if (!product) return;
         if (product.in_stock === false || product.is_active === false) {
           useToastStore.getState().showToast('Product unavailable', 'Please choose another catch.');
@@ -57,8 +57,6 @@ export const useCartStore = create(
             product.price_500g ??
             product.price500g ??
             product.price_500 ??
-            (product.price_1kg ? Math.round(Number(product.price_1kg) / 2) : null) ??
-            (product.price1kg ? Math.round(Number(product.price1kg) / 2) : null) ??
             product.price ??
             0
           );
@@ -74,8 +72,12 @@ export const useCartStore = create(
           );
         }
 
+        if (!Number.isFinite(price) || price <= 0) {
+          useToastStore.getState().showToast('Pack unavailable', 'Please choose a pack with a listed price.');
+          return false;
+        }
         const productId = product.productId || product.id;
-        const selectedCut = product.cut || product.standard_cut || cut;
+        const selectedCut = product.cut || cut || product.standard_cut || 'Cleaned';
         const cartItemId = `${productId}-${is500g ? '500g' : '1000g'}-${selectedCut}`;
         const existingItem = get().cart.find(item => item.cartItemId === cartItemId);
         if ((existingItem?.quantity || 0) + quantity > 999) {

@@ -397,7 +397,6 @@ export default function App() {
             {/* Product Details View */}
             {selectedProduct && (
               <ProductDetailsPage
-                key={selectedProduct.id}
                 key={selectedProduct.id || selectedProduct.name}
                 product={selectedProduct}
                 onBack={handleBackToCatalog}

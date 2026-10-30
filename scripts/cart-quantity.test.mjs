@@ -41,6 +41,19 @@ test('invalid pack counts do not create orders with fractional or negative quant
   assert.equal(useCartStore.getState().cart.length, 0);
 });
 
+test('selected cuts override the default cut and unpriced packs cannot enter the basket', () => {
+  const store = useCartStore.getState();
+  store.clearCart();
+  store.addItem({ ...product, standard_cut: 'Cleaned' }, '1kg', 'Steaks');
+  store.addItem({ ...product, standard_cut: 'Cleaned' }, '1kg');
+  assert.deepEqual(useCartStore.getState().cart.map(item => item.cut), ['Steaks', 'Cleaned']);
+  store.clearCart();
+  for (const price of [null, 0, -1, NaN]) {
+    assert.equal(store.addItem({ ...product, price_500g: price }, '500g'), false);
+  }
+  assert.equal(useCartStore.getState().cart.length, 0);
+});
+
 test('preorder baskets preserve dates and reject mixing deliveries or regular orders', () => {
   const store = useCartStore.getState();
   store.clearCart();

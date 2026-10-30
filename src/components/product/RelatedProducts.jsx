@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Truck, Loader2 } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { getAllProducts } from '../../services/productService';
-import { formatForDetailsPage } from '../../services/productPresentation';
+import { formatForDetailsPage, productDiscount } from '../../services/productPresentation';
 
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?w=500&auto=format&fit=crop&q=60';
@@ -166,8 +166,8 @@ export default function RelatedProducts({ currentProduct, onSelectProduct }) {
             const has500 = !!p.price_500g;
             const price = has500 ? p.price_500g : p.price_1kg;
             const dbMrp = has500 ? p.mrp_500g : p.mrp_1kg;
-            const mrp = dbMrp || Math.round(price * (1 + (p.discount_percent || 20) / 100));
-            const discountPercent = p.discount_percent || Math.round(((mrp - price) / mrp) * 100);
+            const { originalPrice: mrp, discountPercent } = productDiscount(price, dbMrp);
+            const unavailable = p.in_stock === false || !(Number(price) > 0);
             const weight = has500 ? '500g' : '1kg';
             const img = p.image_url || FALLBACK_IMG;
             const marathiName = p.marathi_name || p.marathiName || '';
@@ -202,7 +202,8 @@ export default function RelatedProducts({ currentProduct, onSelectProduct }) {
                   />
                   <button
                     type="button"
-                    aria-label={`Add ${p.name} to cart`}
+                    disabled={unavailable}
+                    aria-label={unavailable ? `${p.name} currently unavailable` : `Add ${p.name} to cart`}
                     onClick={(e) => {
                       e.stopPropagation();
                       addItem?.(p, weight);

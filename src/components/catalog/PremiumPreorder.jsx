@@ -3,6 +3,7 @@ import { ShoppingBag } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import { earliestPreorderDate, isPreorderProduct, validatePreorderDate } from '../../services/preorder';
 import { getPreorderNoticeDays } from '../../services/productService';
+import { productCuts } from '../../services/productPresentation';
 
 export default function PremiumPreorder({ products = [] }) {
   const prefix = useId();
@@ -20,8 +21,7 @@ export default function PremiumPreorder({ products = [] }) {
   const product = available.find(item => item.id === productId) || available[0];
   const pack = weight === '500g' && product?.price_500g > 0 ? '500g' : '1kg';
   const price = Number(pack === '500g' ? product?.price_500g : product?.price_1kg);
-  const cuts = product?.cuts?.map(item => item.name) || product?.cut_options_detail?.map(item => item.name) || [];
-  const choices = cuts.length ? cuts : [product?.standard_cut || 'Cleaned'];
+  const choices = productCuts(product).map(item => item.name);
   const selectedCut = choices.includes(cut) ? cut : choices[0];
   useEffect(() => {
     let cancelled = false;

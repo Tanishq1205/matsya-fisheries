@@ -46,12 +46,21 @@ The functional review and fixes are available locally. These changes have not be
 - Checkout, confirmation, tracking and admin label UPI as payment on delivery. Choosing it places a pending order; staff verify the received payment before marking it paid. No online payment gateway is connected.
 - Regression uses catalog and historical order fixtures with the old wording and checks that it does not appear. It also chooses UPI in checkout and verifies the saved pending state.
 
+## Additional storefront review
+
+- Featured cards without a matching live catalog item return to the catalog with an availability message, instead of opening an invalid product.
+- Catalog and related cards show an MRP only when one is actually supplied and higher than the price. Savings use the listed MRP, rounded down to avoid overstating the discount.
+- Basic `cut_options` remain selectable when `cut_options_detail` is empty. Details and preorder forms share the same cut choices.
+- Explicitly selected cuts take precedence over the default cut in the basket. Missing or invalid pack prices cannot create guessed-price items.
+- Out-of-stock quick-add controls are disabled and labelled unavailable.
+- Browser regression includes the missing featured-product case, absent MRP, inconsistent legacy discount percentage, selected cuts reaching regular/preorder submissions, and disabled unavailable-product controls.
+
 ## Verification
 
 | Check | Result |
 | --- | --- |
 | Production build | Passed |
-| Node tests: CAPTCHA lifecycle, cart quantities, checkout retry keys, metadata output, receipt contents, cleaned-weight ranges, preorder dates and basket separation | 22 passed |
+| Node tests: CAPTCHA lifecycle, cart quantities, checkout retry keys, metadata output, receipt contents, cleaned-weight ranges, preorder dates and basket separation | 25 passed |
 | Browser flow using mocked Supabase responses | Passed |
 | Mobile and desktop viewport checks | Passed at 320, 390, 768, 1024, and 1440px |
 | Browser uncaught JavaScript errors during regression | None |
@@ -69,7 +78,7 @@ No real orders or staff updates were created during this review. Mocked browser 
 
 - Deploy the local updates when requested, then test one full order on a real phone, including staff payment confirmation and tracking.
 - Verify real Turnstile challenges and Supabase CAPTCHA enforcement on the deployed hostname.
-- Finish the custom domain/DNS and confirm HTTPS and the final configured website URL.
+- The custom domain previously passed DNS/HTTPS checks and redirects to https://www.matsyafisheriess.com/. Confirm the final configured website URL whenever hosting settings change.
 - Owner details: grievance officer, registration-number verification, and founder photo if desired.
 - Revised Why Matsya copy (#6) is still awaiting the owner.
 - The owner reports completing the preorder migration and SQL tests in Supabase. This was also tested in isolated PostgreSQL; the remote application has not been independently verified by Codex. See PREORDERS.md.

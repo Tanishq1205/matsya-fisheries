@@ -8,12 +8,14 @@ const base = process.env.MATSYA_REVIEW_URL || 'http://127.0.0.1:5173';
 const products = ['Surmai', 'Rawas', 'Unavailable Fish'].map((name, i) => ({
   id: `33333333-3333-4333-8333-33333333333${i}`, name, category: 'Premium Sea Fish',
   price_500g: 399, price_1kg: 750, standard_cut: 'Cleaned & RO Washed', landing_origin: 'Cleaned & RO Washed', subtitle: 'Cleaned in pure RO water', is_active: true,
+  cut_options: ['Cleaned & RO Washed', 'Steaks'], cut_options_detail: [], mrp_500g: i === 0 ? 479 : null, discount_percent: 20,
   in_stock: i !== 2, image_url: '/images/hero/hero-fish.png', created_at: new Date().toISOString(),
 }));
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const errors = [];
 let order;
 let submissions = 0;
+let submittedCut;
 let rejectStatus = false;
 let preorderNotice = 2;
 let extraOrder = false;
@@ -49,6 +51,7 @@ await context.route('**/*.supabase.co/**', async route => {
   }
   if (url.pathname.endsWith('/rpc/place_order_once')) {
     submissions++;
+    submittedCut = req.postDataJSON().order_payload.items[0].cut;
     order = { ...req.postDataJSON().order_payload, id: '44444444-4444-4444-8444-444444444444', order_number: 123, customer_id: '11111111-1111-4111-8111-111111111111', created_at: new Date().toISOString(), order_status: 'placed', payment_status: 'pending' };
     order.items = order.items.map(item => ({ ...item, cut: 'Cleaned & RO Washed' }));
     return json(order);
@@ -73,6 +76,17 @@ const ready = async () => { await page.waitForTimeout(5500); };
 const visible = text => page.getByRole('heading', { name: text, exact: true }).waitFor({ state: 'visible' });
 try {
   await page.goto(base); await ready();
+  await page.getByAltText('Silver Pomfret (Paplet)', { exact: true }).locator('..').click();
+  await page.getByText('Catch currently unavailable', { exact: true }).waitFor();
+  assert.ok(!page.url().includes('product=undefined'));
+  const catalog = page.locator('#all-products');
+  const surmaiCard = catalog.getByRole('heading', { name: 'Surmai', exact: true }).locator('../../..');
+  assert.match(await surmaiCard.innerText(), /Save 16% Today/i);
+  const rawasCard = catalog.getByRole('heading', { name: 'Rawas', exact: true }).locator('../../..');
+  assert.doesNotMatch(await rawasCard.innerText(), /Save.*%/i);
+  await catalog.getByRole('button', { name: 'Currently unavailable', exact: true }).waitFor();
+  assert.equal(await catalog.getByRole('button', { name: 'Currently unavailable', exact: true }).isDisabled(), true);
+  console.log('PASS: missing featured fish returns to catalog, truthful MRP/discounts, out-of-stock quick add disabled');
   await page.getByRole('button', { name: 'Add Pincode', exact: true }).click();
   await page.getByPlaceholder('Enter 6-digit Pincode').fill('400015');
   await page.getByRole('button', { name: 'Check', exact: true }).click();
@@ -87,6 +101,7 @@ try {
   await page.getByRole('button', { name: 'Add one pack' }).click({ clickCount: 2 });
   assert.match(await page.locator('main').innerText(), /3 × 500g = 1.5kg total/);
   assert.match(await page.locator('main').innerText(), /1,050–1,200g/);
+  await page.getByRole('button', { name: 'Steaks', exact: true }).click();
   await page.getByRole('button', { name: /ADD TO CART/ }).click();
   await page.getByRole('button', { name: 'View Shopping Cart' }).click();
   await page.getByRole('button', { name: /checkout/i }).click();
@@ -106,6 +121,7 @@ try {
   await page.getByRole('button', { name: /PLACE ORDER/ }).click();
   await visible('Thank You, Review!');
   assert.equal(submissions, 1);
+  assert.equal(submittedCut, 'Steaks');
   assert.equal(order.payment_method, 'UPI');
   assert.equal(order.payment_status, 'pending');
   assert.ok((await page.locator('main').innerText()).includes('UPI on delivery'));
@@ -233,6 +249,7 @@ try {
   await page.getByText('Pre-order for a later date', { exact: true }).click();
   const preorder = page.getByRole('region', { name: 'Premium fish, by preorder' });
   assert.equal(await preorder.getByLabel('Fish or variety').inputValue(), products[0].id);
+  await preorder.getByLabel(/^Fish cut/).selectOption('Steaks');
   await preorder.getByLabel('Number of packs').fill('3');
   await preorder.getByLabel('Delivery date', { exact: true }).fill(earliestPreorderDate(new Date(), 1));
   assert.equal(await preorder.getByLabel('Delivery date', { exact: true }).evaluate(el => el.validity.valid), false);
@@ -254,6 +271,7 @@ try {
   await page.getByRole('button', { name: /PLACE ORDER/ }).click();
   await visible('Thank You, Review!');
   assert.equal(submissions, 2);
+  assert.equal(submittedCut, 'Steaks');
   assert.equal(order.order_type, 'preorder');
   assert.equal(order.delivery_date, deliveryDate);
   assert.equal(order.payment_method, 'COD');
