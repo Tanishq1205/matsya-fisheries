@@ -25,6 +25,16 @@ returning id, email, raw_app_meta_data ->> 'role' as staff_role;
 
 Creating an Auth user alone does not grant admin access. The approved role is stored in **app_metadata**, never user_metadata.
 
+## Reset an existing staff password
+
+1. In **Authentication > URL Configuration**, set **Site URL** to `https://www.matsyafisheriess.com` so dashboard recovery emails return to the live website. If using a staging project, use its own website URL.
+2. In **Authentication > Users**, open the existing staff account and choose **Send password recovery**.
+3. Open the newest recovery email privately and click its reset link. The website opens **Reset your staff password**. Enter and confirm a new password (at least 8 characters; Supabase may enforce a stricter project policy).
+4. Once **Password updated** appears, return to the website and open admin with **Ctrl+Shift+A**. Sign in using the existing email and new password.
+5. If the link expired or was already used, send a fresh recovery email. Do not send anyone the recovery link or its tokens. If Supabase reports an email delivery/rate-limit error, resolve that in the project's email settings before retrying.
+
+Resetting a password preserves the user's ID and existing admin role. If login then says the account lacks staff access, check the role using the setup steps above. The reset uses the separate staff client, keeping the guest session and basket intact. This flow supports the standard Supabase dashboard recovery email; it does not use magic-link sign-in as a substitute for saving a password.
+
 ## Remove staff access
 
 Run this for the confirmed staff UID in the trusted SQL Editor:
